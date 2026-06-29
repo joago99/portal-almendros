@@ -1,0 +1,91 @@
+/* Reset and base styles */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  background: #f4f4f4;
+  color: #333;
+}
+a { color: #2563eb; text-decoration: none; }
+
+/* Login */
+.container {
+  max-width: 400px;
+  margin: 120px auto;
+  background: #fff;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  text-align: center;
+}
+input {
+  width: 100%;
+  padding: 0.6rem;
+  margin: 0.4rem 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+button {
+  width: 100%;
+  padding: 0.6rem;
+  background: #2563eb;
+  border: none;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+button:hover { background: #1d4ed8; }
+
+/* App layout */
+.app nav {
+  background: #111827;
+  color: #fff;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.app nav button {
+  background: transparent;
+  border: 1px solid #fff;
+  padding: 0.4rem 0.8rem;
+  margin-left: 0.5rem;
+}
+.app main { padding: 2rem; }
+.hidden { display: none; }
+
+/* Modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-content {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 320px;
+}
+
+/* Cards */
+.card {
+  background: #fff;
+  padding: 1rem;
+  margin: 0.5rem 0;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.status {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+.status.pagado { background: #bbf7d0; color: #14532d; }
+.status.pendiente { background: #fde047; color: #713f12; }
+.status.atrasado { background: #fecaca; color: #7f1d1d; }

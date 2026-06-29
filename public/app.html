@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Portal - Construcciones Los Almendros</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <div class="app">
+    <nav>
+      <span>Construcciones Los Almendros</span>
+      <button id="changePasswordBtn">Cambiar contraseña</button>
+      <button id="logoutBtn">Salir</button>
+    </nav>
+
+    <main id="mainContent">Cargando...</main>
+
+    <div id="changePasswordModal" class="modal" style="display:none">
+      <div class="modal-content">
+        <h2>Cambiar contraseña</h2>
+        <form id="changePasswordForm">
+          <input type="password" id="currentPassword" placeholder="Contraseña actual" required>
+          <input type="password" id="newPassword" placeholder="Nueva contraseña" required>
+          <button type="submit">Actualizar</button>
+        </form>
+        <button id="closeModal">Cerrar</button>
+        <div id="passwordMessage"></div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

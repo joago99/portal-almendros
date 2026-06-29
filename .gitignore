@@ -1,0 +1,26 @@
+# Dependencies
+/vendor
+/node_modules
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Uploads (historical test data)
+/uploads/*
+!/uploads/.gitkeep
+
+# Logs
+*.log
