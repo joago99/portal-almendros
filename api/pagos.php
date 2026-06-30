@@ -21,7 +21,7 @@ if ($action) {
     $due = $_POST['due_date'] ?? date('Y-m-d');
     $status = $_POST['status'] ?? 'pendiente';
     if (!$projId || !$concept || !$amount) { echo json_encode(['ok'=>false,'error'=>'Faltan datos']); exit; }
-    $db->prepare('INSERT INTO payments (project_id, concept, amount_clp, due_date, status, created_by) VALUES (?,?,?,?,?,?)')
+    $db->prepare('INSERT INTO payments (project_id, concept, amount_clp, due_date, status, created_by) ,created_by) VALUES (?,?,?,?,?,?,?)'
       ->execute([$projId, $concept, $amount, $due, $status, $userId]);
     echo json_encode(['ok'=>true, 'id'=>$db->lastInsertId()]); exit;
   }

@@ -125,6 +125,7 @@ const CLIENTES = <?= json_encode($clientes) ?>;
       <?php if ($isStaff): ?>
       <button class="btn btn-primary btn-sm" onclick="editarProyecto(<?= $proj['id'] ?>)">Editar</button>
       <button class="btn btn-outline btn-sm" onclick="cambiarEstadoProyecto(<?= $proj['id'] ?>)">Cambiar estado</button>
+      <button class="btn btn-danger btn-sm" onclick="eliminarProyecto(<?= $proj['id'] ?>)">Eliminar</button>
       <?php endif; ?>
     </div>
     <div class="card">
@@ -235,5 +236,10 @@ async function cambiarEstadoSubmit(form, id) {
   const d = await res.json();
   if (d.ok) { showToast('Estado actualizado ✅'); closeModal(); loadTab('proyectos'); return false; }
   else { showToast(d.error, 'error'); return false; }
+}
+function eliminarProyecto(id) {
+  if (!confirm('¿Eliminar este proyecto? También se borrarán sus pagos y documentos.')) return;
+  fetch('/api/projects.php', {method:'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: new URLSearchParams({action:'delete',id}).toString()})
+    .then(r=>r.json()).then(d=>{ if(d.ok){ showToast('Proyecto eliminado'); loadTab('proyectos'); } else showToast(d.error,'error'); });
 }
 </script>

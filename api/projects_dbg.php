@@ -1,4 +1,8 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/config.php';
 header('Content-Type: application/json');
@@ -37,9 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'update' && $_POST['id'
     if (isset($_POST[$k])) { $fields[] = "$k = ?"; $params[] = $_POST[$k]; }
   }
   if (isset($_POST['budget_clp'])) { $fields[] = "budget_clp = ?"; $params[] = $_POST['budget_clp']; }
-  $fields[] = 'updated_by = ?';
-  $params[] = $userId;
-  if ($fields) {
+  \$fields[] = 'updated_by = ?';
+  \$params[] = \$userId;
+  if (\$fields) {
     // presupuesto anterior, para historial
     $old = $db->prepare('SELECT budget_clp FROM projects WHERE id = ?');
     $old->execute([$id]); $prev = $old->fetch();
