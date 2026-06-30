@@ -1,0 +1,5 @@
+open 217.196.54.191
+u752254808
+HOSTjoago20
+ls public_html
+quit
