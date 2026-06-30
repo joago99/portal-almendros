@@ -8,7 +8,7 @@ $staff = in_array($userRole, ['admin','staff']);
 if (!$userId) exit;
 $db = Database::get();
 
-$action = $_GET['action'] ?? '';
+$action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 // ─── Backend actions ───
 if ($action) {

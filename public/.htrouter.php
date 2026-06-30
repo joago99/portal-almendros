@@ -25,10 +25,13 @@ $routes = [
     '/api/documentos.php' => $root . '/api/documentos.php',
     '/api/password.php' => $root . '/api/auth/change-password.php',
 
+    // Admin
+    '/api/admin.php' => $root . '/api/admin.php',
+
     // Backend actions (POST)
-    '/api/projects.php' => $root . '/api/app/projects.php',
-    '/api/payments.php' => $root . '/api/app/payments.php',
-    '/api/documents.php' => $root . '/api/app/documents.php',
+    '/api/projects.php' => $root . '/api/projects.php',
+    '/api/payments.php' => $root . '/api/pagos.php',
+    '/api/documents.php' => $root . '/api/documentos.php',
     '/api/clientes_backend.php' => $root . '/api/clientes_backend.php',
     '/api/pagos/form.php' => $root . '/api/pagos/form.php',
 ];
@@ -48,5 +51,6 @@ if (isset($public_pages[$path])) {
     return true;
 }
 
-require __DIR__ . '/login.php';
+http_response_code(404);
+echo '404 Not Found';
 return true;

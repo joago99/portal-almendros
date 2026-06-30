@@ -7,7 +7,7 @@ $userId = $_SESSION['user_id'] ?? null;
 $userRole = $_SESSION['user_role'] ?? null;
 if (!$userId || !in_array($userRole, ['admin','staff'])) { echo json_encode(['ok'=>false,'error'=>'No autorizado']); exit; }
 $db = Database::get();
-$action = $_GET['action'] ?? '';
+$action = $_GET['action'] ?? $_POST['action'] ?? '';
 $in = json_decode(file_get_contents('php://input'), true) ?: [];
 
 // GET list for app (JSON) used by JS when editing

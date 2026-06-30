@@ -7,7 +7,7 @@ $userRole = $_SESSION['user_role'] ?? null;
 $isAdmin = $userRole === 'admin';
 if (!$isAdmin) { echo '<div class="empty-state"><div class="icon">🔒</div><p>Acceso solo para administradores</p></div>'; exit; }
 $db = Database::get();
-$action = $_GET['action'] ?? 'dashboard';
+$action = $_GET['action'] ?? $_POST['action'] ?? 'dashboard';
 
 // ─── POST actions ───
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
