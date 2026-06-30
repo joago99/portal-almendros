@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pass = $_POST['password'] ?? '';
 
     $db = Database::get();
-    $stmt = $db->prepare('SELECT id, password_hash, role, name FROM app_users WHERE email = ? AND active = 1');
+    $stmt = $db->prepare('SELECT id, password_hash, role, name FROM app_users WHERE email = ? AND active = 1 AND (expires_at IS NULL OR expires_at >= date("now"))');
     $stmt->execute([$email]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
