@@ -121,20 +121,20 @@ $isAdmin = $userRole === 'admin';
     <span class="role-badge"><?= $userRole === 'admin' ? 'Admin' : ($userRole === 'staff' ? 'Staff' : 'Cliente') ?></span>
   </div>
   <nav class="sidebar-nav">
-    <a class="nav-item active" data-tab="resumen" href="#resumen"><span class="icon">📊</span><span>Resumen</span></a>
-    <a class="nav-item" data-tab="proyectos" href="#proyectos"><span class="icon">🏗️</span><span>Proyectos</span></a>
-    <a class="nav-item" data-tab="clientes" href="#clientes"><span class="icon">👥</span><span>Clientes</span></a>
-    <a class="nav-item" data-tab="pagos" href="#pagos"><span class="icon">💰</span><span>Pagos</span>
+    <a class="nav-item active" data-tab="resumen" href="#resumen"><span class="icon" style="width:8px;height:8px;border-radius:2px;background:#0d9488;display:inline-block;flex-shrink:0"></span><span>Resumen</span></a>
+    <a class="nav-item" data-tab="proyectos" href="#proyectos"><span class="icon" style="width:8px;height:8px;border-radius:2px;background:#2563eb;display:inline-block;flex-shrink:0"></span><span>Proyectos</span></a>
+    <a class="nav-item" data-tab="clientes" href="#clientes"><span class="icon" style="width:8px;height:8px;border-radius:2px;background:#7c3aed;display:inline-block;flex-shrink:0"></span><span>Clientes</span></a>
+    <a class="nav-item" data-tab="pagos" href="#pagos"><span class="icon" style="width:8px;height:8px;border-radius:2px;background:#ca8a04;display:inline-block;flex-shrink:0"></span><span>Pagos</span>
       <?php if ($atrasados > 0 && in_array($userRole, ['admin','staff'])): ?><span class="badge"><?= $atrasados ?></span><?php endif; ?>
     </a>
-    <a class="nav-item" data-tab="documentos" href="#documentos"><span class="icon">📄</span><span>Documentos</span></a>
+    <a class="nav-item" data-tab="documentos" href="#documentos"><span class="icon" style="width:8px;height:8px;border-radius:2px;background:#0891b2;display:inline-block;flex-shrink:0"></span><span>Documentos</span></a>
     <?php if ($isAdmin): ?>
-    <a class="nav-item" data-tab="admin" href="#admin" style="margin-top:0.5rem;border-top:1px solid #e2e8f0;padding-top:0.75rem"><span class="icon">⚙️</span><span>Admin</span></a>
+    <a class="nav-item" data-tab="admin" href="#admin" style="margin-top:0.5rem;border-top:1px solid #e2e8f0;padding-top:0.75rem"><span class="icon" style="width:8px;height:8px;border-radius:2px;background:#64748b;display:inline-block;flex-shrink:0"></span><span>Admin</span></a>
     <?php endif; ?>
     <?php if ($mustChange): ?>
-    <a class="nav-item" data-tab="password" href="#password" style="margin-top:auto;color:#dc2626"><span class="icon">🔐</span><span>Cambiar contraseña</span></a>
+    <a class="nav-item" data-tab="password" href="#password" style="margin-top:auto;color:#dc2626"><span class="icon" style="width:8px;height:8px;border-radius:2px;background:#dc2626;display:inline-block;flex-shrink:0"></span><span>Cambiar contraseña</span></a>
     <?php endif; ?>
-    <a class="nav-item" href="/logout.php" style="margin-top:auto;color:#94a3b8"><span class="icon">🚪</span><span>Cerrar sesión</span></a>
+    <a class="nav-item" href="/logout.php" style="margin-top:auto;color:#94a3b8"><span class="icon" style="width:8px;height:8px;border-radius:2px;background:#94a3b8;display:inline-block;flex-shrink:0"></span><span>Cerrar sesión</span></a>
   </nav>
 </aside>
 

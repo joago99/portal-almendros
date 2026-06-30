@@ -213,9 +213,27 @@ async function editarProyectoEnviar(form) {
 }
 
 function cambiarEstadoProyecto(id) {
-  const s = prompt('Nuevo estado (activo / pausado / finalizado)');
-  if (!s || !['activo','pausado','finalizado'].includes(s)) return;
-  fetch('/api/projects.php', {method:'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: new URLSearchParams({action:'change_status',id,status:s}).toString()})
-    .then(r=>r.json()).then(d=>{ if(d.ok){ showToast('Estado actualizado'); loadTab('proyectos'); } else showToast(d.error,'error'); });
+  openModal(`<h3>Cambiar estado del proyecto</h3>
+    <form id="estadoForm" onsubmit="return cambiarEstadoSubmit(this, ${id})">
+      <label>Nuevo estado</label>
+      <select name="status" required>
+        <option value="activo">Activo</option>
+        <option value="pausado">Pausado</option>
+        <option value="finalizado">Finalizado</option>
+      </select>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar</button>
+      </div>
+    </form>`);
+}
+async function cambiarEstadoSubmit(form, id) {
+  const fd = new FormData(form);
+  fd.set('action', 'change_status');
+  fd.set('id', id);
+  const res = await fetch('/api/projects.php', {method:'POST', body: new URLSearchParams(fd).toString(), headers: {'Content-Type':'application/x-www-form-urlencoded'}});
+  const d = await res.json();
+  if (d.ok) { showToast('Estado actualizado ✅'); closeModal(); loadTab('proyectos'); return false; }
+  else { showToast(d.error, 'error'); return false; }
 }
 </script>

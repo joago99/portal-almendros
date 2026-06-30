@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'list_json') {
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'get' && ($_GET['id'] ?? null)) {
   $st=$db->prepare('SELECT p.*, c.name as client_name FROM projects p LEFT JOIN clients c ON c.id = p.client_id WHERE p.id=?');
   $st->execute([(int)$_GET['id']]); $r=$st->fetch();
-  echo json_encode(['ok'=>true,'data'=>$r]); exit;
+  echo json_encode($r ?: ['ok'=>false]); exit;
 }
 
 // GET clients list for selects
@@ -62,13 +62,13 @@ if ($action === 'doc_counts' && $_GET['id'] ?? null) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'create') {
-  $name = trim($in['name'] ?? '');
-  $status = $in['status'] ?? 'activo';
-  $clientId = isset($in['client_id']) ? (int)$in['client_id'] : null;
-  $budget = isset($in['budget_clp']) ? (float)$in['budget_clp'] : 0;
-  $address = $in['address'] ?? null;
-  $start = $in['start_date'] ?? null;
-  $end = $in['end_date_estimated'] ?? null;
+  $name = trim($_POST['name'] ?? '');
+  $status = $_POST['status'] ?? 'activo';
+  $clientId = (isset($_POST['client_id']) && $_POST['client_id'] !== '') ? (int)$_POST['client_id'] : null;
+  $budget = isset($_POST['budget_clp']) ? (float)$_POST['budget_clp'] : 0;
+  $address = $_POST['address'] ?? null;
+  $start = $_POST['start_date'] ?? null;
+  $end = $_POST['end_date_estimated'] ?? null;
   if (!$name) { echo json_encode(['ok'=>false,'error'=>'Nombre requerido']); exit; }
   $db->prepare('INSERT INTO projects (client_id,name,status,budget_clp,address,start_date,end_date_estimated) VALUES (?,?,?,?,?,?,?)')
     ->execute([$clientId,$name,$status,$budget,$address,$start,$end]);
