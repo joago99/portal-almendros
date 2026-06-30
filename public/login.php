@@ -1,6 +1,8 @@
 <?php
-require_once __DIR__ . '/../api/config.php';
-require_once __DIR__ . '/../api/db.php';
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+require_once __DIR__ . '/api/config.php';
+require_once __DIR__ . '/api/db.php';
 header('Content-Type: text/html; charset=utf-8');
 
 $message = '';
@@ -19,6 +21,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user_id'] = (int)$row['id'];
         $_SESSION['user_role'] = $row['role'];
         $_SESSION['user_name'] = $row['name'];
+        // Get client_id for client users
+        if ($row['role'] === 'client') {
+            $st = $db->prepare('SELECT client_id FROM app_users WHERE id = ?');
+            $st->execute([$row['id']]);
+            $cu = $st->fetch();
+            $_SESSION['client_id'] = $cu ? (int)$cu['client_id'] : null;
+        }
         $db->prepare('UPDATE app_users SET last_login_at = datetime("now") WHERE id = ?')->execute([$row['id']]);
         header('Location: /app.php');
         exit;
@@ -36,9 +45,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
   <div class="container">
     <h1>Portal Los Almendros</h1>
-    <?php if ($message): ?>
+    <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1); if ($message): ?>
       <div class="error"><?= htmlspecialchars($message) ?></div>
-    <?php endif; ?>
+    <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1); endif; ?>
     <form method="POST" action="/login.php">
       <input name="email" type="email" placeholder="Email" required>
       <input name="password" type="password" placeholder="Contraseña" required>

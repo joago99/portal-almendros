@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/../api/db.php';
-require_once __DIR__ . '/../api/config.php';
+require_once __DIR__ . '/api/db.php';
+require_once __DIR__ . '/api/config.php';
 session_start();
 $userId = $_SESSION['user_id'] ?? null;
 $userRole = $_SESSION['user_role'] ?? null;
@@ -17,6 +17,8 @@ if (in_array($userRole, ['admin', 'staff'])) {
   $atrasados = $r['cnt'] ?? 0;
 }
 $isAdmin = $userRole === 'admin';
+$isClient = $userRole === 'client';
+$clientId = $_SESSION['client_id'] ?? null;
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -121,9 +123,11 @@ $isAdmin = $userRole === 'admin';
     <span class="role-badge"><?= $userRole === 'admin' ? 'Admin' : ($userRole === 'staff' ? 'Staff' : 'Cliente') ?></span>
   </div>
   <nav class="sidebar-nav">
-    <a class="nav-item active" data-tab="resumen" href="#resumen"><span class="icon" style="width:8px;height:8px;border-radius:2px;background:#0d9488;display:inline-block;flex-shrink:0"></span><span>Resumen</span></a>
+    <a class="nav-item active" data-tab="resumen" href="#resumen" id="tabResumen"><span class="icon" style="width:8px;height:8px;border-radius:2px;background:#0d9488;display:inline-block;flex-shrink:0"></span><span>Resumen</span></a>
+    <?php if ($isClient): ?><style>#tabResumen{display:none}</style><?php endif; ?>
     <a class="nav-item" data-tab="proyectos" href="#proyectos"><span class="icon" style="width:8px;height:8px;border-radius:2px;background:#2563eb;display:inline-block;flex-shrink:0"></span><span>Proyectos</span></a>
-    <a class="nav-item" data-tab="clientes" href="#clientes"><span class="icon" style="width:8px;height:8px;border-radius:2px;background:#7c3aed;display:inline-block;flex-shrink:0"></span><span>Clientes</span></a>
+    <a class="nav-item" data-tab="clientes" href="#clientes" id="tabClientes"><span class="icon" style="width:8px;height:8px;border-radius:2px;background:#7c3aed;display:inline-block;flex-shrink:0"></span><span>Clientes</span></a>
+    <?php if ($isClient): ?><style>#tabClientes,.nav-item[data-tab="clientes"]{display:none}</style><?php endif; ?>
     <a class="nav-item" data-tab="pagos" href="#pagos"><span class="icon" style="width:8px;height:8px;border-radius:2px;background:#ca8a04;display:inline-block;flex-shrink:0"></span><span>Pagos</span>
       <?php if ($atrasados > 0 && in_array($userRole, ['admin','staff'])): ?><span class="badge"><?= $atrasados ?></span><?php endif; ?>
     </a>
@@ -164,6 +168,8 @@ $isAdmin = $userRole === 'admin';
 <script>
 const ROLE = '<?= $userRole ?>';
 const MUST_CHANGE = <?= json_encode($mustChange) ?>;
+const CLIENT_ID = <?= json_encode($clientId) ?>;
+const IS_CLIENT = <?= json_encode($isClient) ?>;
 let currentTab = 'resumen';
 
 function showToast(msg, type = 'success') {
@@ -200,7 +206,13 @@ async function loadTab(tab) {
   document.getElementById('pageTitle').textContent = titles[tab] || 'Portal';
   document.getElementById('mainContent').innerHTML = '<div class="loading">Cargando...</div>';
   try {
-    const res = await fetch(`/api/${tab}.php`);
+    let url = `/api/${tab}.php`;
+    // For clients, pass their client_id to filter content
+    if (IS_CLIENT && CLIENT_ID) {
+      const sep = url.includes('?') ? '&' : '?';
+      url += `${sep}client_id=${CLIENT_ID}`;
+    }
+    const res = await fetch(url);
     const html = await res.text();
     document.getElementById('mainContent').innerHTML = html;
     // Ejecutar scripts embebidos en el HTML cargado
@@ -278,12 +290,13 @@ async function eliminarPago(id) {
   showToast('Pago eliminado'); loadTab('pagos');
 }
 
-// Hash routing inicial
+// Hash-based routing
+const defaultTab = IS_CLIENT ? 'proyectos' : 'resumen';
 const tabFromHash = location.hash.replace('#', '');
 if (tabFromHash && ['resumen','proyectos','clientes','pagos','documentos','password','admin'].includes(tabFromHash)) {
   loadTab(tabFromHash);
 } else {
-  loadTab('resumen');
+  loadTab(defaultTab);
 }
 </script>
 </body>

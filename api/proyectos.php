@@ -8,6 +8,16 @@ $isStaff = in_array($userRole, ['admin','staff']);
 if (!$userId) exit;
 $db = Database::get();
 
+// Client users: force filter by their assigned client
+if ($userRole === 'client') {
+  $st = $db->prepare('SELECT client_id FROM app_users WHERE id = ?');
+  $st->execute([$userId]);
+  $cu = $st->fetch();
+  $clientFilter = $cu ? (int)$cu['client_id'] : null;
+} else {
+  $clientFilter = $_GET['client_id'] ?? null;
+}
+
 $action = $_GET['action'] ?? '';
 
 if ($action === 'get' && $_GET['id'] ?? null) {

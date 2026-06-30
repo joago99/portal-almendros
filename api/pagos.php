@@ -8,6 +8,14 @@ $isStaff = in_array($userRole, ['admin','staff']);
 if (!$userId) exit;
 $db = Database::get();
 
+// Client filter: force filter by their client_id
+$clientFilter = null;
+if ($userRole === 'client') {
+  $st = $db->prepare('SELECT client_id FROM app_users WHERE id = ?');
+  $st->execute([$userId]); $cu = $st->fetch();
+  $clientFilter = $cu ? (int)$cu['client_id'] : null;
+}
+
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 // ─── Backend actions (JSON) ───
@@ -21,7 +29,7 @@ if ($action) {
     $due = $_POST['due_date'] ?? date('Y-m-d');
     $status = $_POST['status'] ?? 'pendiente';
     if (!$projId || !$concept || !$amount) { echo json_encode(['ok'=>false,'error'=>'Faltan datos']); exit; }
-    $db->prepare('INSERT INTO payments (project_id, concept, amount_clp, due_date, status, created_by) ,created_by) VALUES (?,?,?,?,?,?,?)'
+    $db->prepare('INSERT INTO payments (project_id, concept, amount_clp, due_date, status, created_by) VALUES (?,?,?,?,?,?)')
       ->execute([$projId, $concept, $amount, $due, $status, $userId]);
     echo json_encode(['ok'=>true, 'id'=>$db->lastInsertId()]); exit;
   }
@@ -54,6 +62,11 @@ $where = '';
 if ($filterStatus === 'atrasados') $where = 'WHERE p.status = "pendiente" AND p.due_date < date("now")';
 elseif ($filterStatus === 'pendientes') $where = 'WHERE p.status = "pendiente" AND p.due_date >= date("now")';
 elseif ($filterStatus === 'pagados') $where = 'WHERE p.status = "pagado"';
+// Client filter: only show payments for their projects
+if ($clientFilter) {
+  $clientW = 'pr.client_id = ' . (int)$clientFilter;
+  $where = $where ? $where . ' AND ' . $clientW : 'WHERE ' . $clientW;
+}
 
 $payments = $db->query('SELECT p.*, pr.name as proyecto, c.name as cliente FROM payments p JOIN projects pr ON pr.id = p.project_id JOIN clients c ON c.id = pr.client_id '.$where.' ORDER BY p.due_date DESC LIMIT 100')->fetchAll();
 
@@ -61,7 +74,12 @@ $totalPendiente = array_sum(array_map(fn($p) => ($p['status']==='pendiente' && s
 $totalAtrasado = array_sum(array_map(fn($p) => ($p['status']==='pendiente' && strtotime($p['due_date'])<time()) ? $p['amount_clp'] : 0, $payments));
 $totalPagado = array_sum(array_map(fn($p) => $p['status']==='pagado' ? $p['amount_clp'] : 0, $payments));
 
-$projects = $db->query('SELECT p.id, p.name, COALESCE(c.name,"") as client FROM projects p LEFT JOIN clients c ON c.id = p.client_id ORDER BY p.name')->fetchAll();
+if ($clientFilter) {
+  $st = $db->prepare('SELECT p.id, p.name, COALESCE(c.name,"") as client FROM projects p LEFT JOIN clients c ON c.id = p.client_id WHERE p.client_id = ? ORDER BY p.name');
+  $st->execute([$clientFilter]); $projects = $st->fetchAll();
+} else {
+  $projects = $db->query('SELECT p.id, p.name, COALESCE(c.name,"") as client FROM projects p LEFT JOIN clients c ON c.id = p.client_id ORDER BY p.name')->fetchAll();
+}
 $today = date('Y-m-d');
 ?>
 <script>
