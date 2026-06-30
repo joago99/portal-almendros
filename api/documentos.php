@@ -63,7 +63,7 @@ $docClient = $_GET['client_id'] ?? null;
 $projects = $db->query('SELECT p.id, p.name, COALESCE(c.name,"") as client FROM projects p LEFT JOIN clients c ON c.id = p.client_id ORDER BY p.name')->fetchAll();
 $clients = $db->query('SELECT id, name FROM clients ORDER BY name')->fetchAll();
 $where = $docProject ? 'WHERE d.project_id = '.(int)$docProject : ($docClient ? 'WHERE p.client_id = '.(int)$docClient : '');
-$docs = $db->query('SELECT d.*, p.name as proyecto, c.name as cliente, u.name as uploader FROM documents d JOIN projects p ON p.id = d.project_id JOIN clients c ON c.id = p.client_id JOIN app_users u ON u.id = d.uploaded_by '.$where.' ORDER BY d.uploaded_at DESC LIMIT 100')->fetchAll();
+$docs = $db->query('SELECT d.*, p.name as proyecto, c.name as cliente, u.name as uploader FROM documents d LEFT JOIN projects p ON p.id = d.project_id LEFT JOIN clients c ON c.id = p.client_id LEFT JOIN app_users u ON u.id = d.uploaded_by '.$where.' ORDER BY d.uploaded_at DESC LIMIT 100')->fetchAll();
 ?>
 <script>
 const DOC_PROJECTS = <?= json_encode($projects) ?>;

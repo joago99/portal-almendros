@@ -64,10 +64,10 @@ $search = $_GET['q'] ?? '';
 $statusFilter = $_GET['estado'] ?? '';
 
 if ($clientFilter) {
-    $stmt = $db->prepare('SELECT p.*, c.name as client_name FROM projects p JOIN clients c ON c.id = p.client_id WHERE p.client_id = ? ORDER BY p.created_at DESC');
+    $stmt = $db->prepare('SELECT p.*, c.name as client_name FROM projects p LEFT JOIN clients c ON c.id = p.client_id WHERE p.client_id = ? ORDER BY p.created_at DESC');
     $stmt->execute([$clientFilter]);
 } else {
-    $stmt = $db->query('SELECT p.*, c.name as client_name FROM projects p JOIN clients c ON c.id = p.client_id ORDER BY p.created_at DESC');
+    $stmt = $db->query('SELECT p.*, c.name as client_name FROM projects p LEFT JOIN clients c ON c.id = p.client_id ORDER BY p.created_at DESC');
 }
 $projects = $stmt->fetchAll();
 $clientes = $db->query('SELECT id, name FROM clients ORDER BY name')->fetchAll();
