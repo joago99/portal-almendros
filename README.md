@@ -47,14 +47,9 @@ Dashboard con estadísticas generales: proyectos activos, pagos pendientes/atras
 
 ## Accesos
 
-| Usuario | Email | Rol | Contraseña |
-|---|---|---|---|
-| Joago | joago@losalmendros.cl | Admin | admin123 |
-| Admin | admin@losalmendros.cl | Admin | admin123 |
-| Falcon | falcon@losalmendros.cl | Staff | partner123 |
-| Tiguer_buin | tiguer@losalmendros.cl | Staff | partner123 |
-| Cristóbal | cristobal@losalmendros.cl | Staff | construye2026 |
-| Cliente Prueba | cliente@losalmendros.cl | Cliente | cliente123 |
+Los accesos de producción no se documentan en este repo. Consultar al administrador del portal.
+
+> Importante: el README público nunca debe exponer cuentas, correos ni contraseñas.
 
 ---
 
