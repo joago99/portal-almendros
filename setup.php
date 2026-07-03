@@ -111,11 +111,13 @@ CREATE TABLE IF NOT EXISTS password_resets (
 // Crear admin inicial: admin@losalmendros.cl / admin123
 $stmt = $db->prepare('SELECT id FROM app_users WHERE email = ?');
 $stmt->execute(['admin@losalmendros.cl']);
-if (!$stmt->fetch()) {
-    $hash = password_hash('admin123', PASSWORD_DEFAULT);
-    $db->prepare('INSERT INTO app_users (email, password_hash, role, name, force_password_change) VALUES (?,?,?,?,?)')
-        ->execute(['admin@losalmendros.cl', $hash, 'admin', 'Admin', 0]);
-    echo "✓ Admin creado: admin@losalmendros.cl / admin123\n";
+// Crear admin inicial: admin@losalmendros.cl
+$tempPass = bin2hex(random_bytes(8));
+$hash = password_hash($tempPass, PASSWORD_DEFAULT);
+$db->prepare('INSERT INTO app_users (email, password_hash, role, name, force_password_change) VALUES (?,?,?,?,?)')
+    ->execute(['admin@losalmendros.cl', $hash, 'admin', 'Admin', 1]);
+echo "✓ Admin creado: admin@losalmendros.cl / temporal: $tempPass\n";
+echo "  IMPORTANTE: ingresar y cambiar contraseña inmediatamente.\n";
 } else {
     echo "✓ Admin ya existe\n";
 }

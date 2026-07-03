@@ -214,7 +214,6 @@ class Auth {
     return [
       'ok' => true,
       'message' => 'Si el email existe, recibirás instrucciones.',
-      'reset_url' => $resetUrl, // Solo para desarrollo; en prod no mostrar
     ];
   }
 
