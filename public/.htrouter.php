@@ -40,6 +40,7 @@ $routes = [
 ];
 
 $public_pages = [
+    '/' => __DIR__ . '/../api/auth/login.php',
     '/app.php' => __DIR__ . '/app.php',
     '/login.php' => __DIR__ . '/login.php',
 ];
