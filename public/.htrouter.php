@@ -20,6 +20,7 @@ $routes = [
     // Tabs principales
     '/api/resumen.php' => $root . '/api/resumen.php',
     '/api/proyectos.php' => $root . '/api/proyectos.php',
+    '/api/avance.php' => $root . '/api/avance.php',
     '/api/clientes.php' => $root . '/api/clientes.php',
     '/api/pagos.php' => $root . '/api/pagos.php',
     '/api/documentos.php' => $root . '/api/documentos.php',
@@ -34,6 +35,8 @@ $routes = [
     '/api/documents.php' => $root . '/api/documentos.php',
     '/api/clientes_backend.php' => $root . '/api/clientes_backend.php',
     '/api/pagos/form.php' => $root . '/api/pagos/form.php',
+    '/api/progress.php' => $root . '/api/progress.php',
+    '/api/subir_foto.php' => $root . '/api/subir_foto.php',
 ];
 
 $public_pages = [

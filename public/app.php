@@ -126,6 +126,7 @@ $clientId = $_SESSION['client_id'] ?? null;
     <a class="nav-item active" data-tab="resumen" href="#resumen" id="tabResumen"><span class="icon" style="width:8px;height:8px;border-radius:2px;background:#0d9488;display:inline-block;flex-shrink:0"></span><span>Resumen</span></a>
     <?php if ($isClient): ?><style>#tabResumen{display:none}</style><?php endif; ?>
     <a class="nav-item" data-tab="proyectos" href="#proyectos"><span class="icon" style="width:8px;height:8px;border-radius:2px;background:#2563eb;display:inline-block;flex-shrink:0"></span><span>Proyectos</span></a>
+    <a class="nav-item" data-tab="avance" href="#avance"><span class="icon" style="width:8px;height:8px;border-radius:2px;background:#059669;display:inline-block;flex-shrink:0"></span><span>Avance</span></a>
     <a class="nav-item" data-tab="clientes" href="#clientes" id="tabClientes"><span class="icon" style="width:8px;height:8px;border-radius:2px;background:#7c3aed;display:inline-block;flex-shrink:0"></span><span>Clientes</span></a>
     <?php if ($isClient): ?><style>#tabClientes,.nav-item[data-tab="clientes"]{display:none}</style><?php endif; ?>
     <a class="nav-item" data-tab="pagos" href="#pagos"><span class="icon" style="width:8px;height:8px;border-radius:2px;background:#ca8a04;display:inline-block;flex-shrink:0"></span><span>Pagos</span>
@@ -202,7 +203,7 @@ async function loadTab(tab) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const navItem = document.querySelector(`[data-tab="${tab}"]`);
   if (navItem) navItem.classList.add('active');
-  const titles = { resumen: 'Resumen', proyectos: 'Proyectos', clientes: 'Clientes', pagos: 'Pagos', documentos: 'Documentos', password: 'Cambiar contraseña', admin: 'Admin' };
+  const titles = { resumen: 'Resumen', proyectos: 'Proyectos', avance: 'Avance de Obra', clientes: 'Clientes', pagos: 'Pagos', documentos: 'Documentos', password: 'Cambiar contraseña', admin: 'Admin' };
   document.getElementById('pageTitle').textContent = titles[tab] || 'Portal';
   document.getElementById('mainContent').innerHTML = '<div class="loading">Cargando...</div>';
   try {
@@ -293,7 +294,7 @@ async function eliminarPago(id) {
 // Hash-based routing
 const defaultTab = IS_CLIENT ? 'proyectos' : 'resumen';
 const tabFromHash = location.hash.replace('#', '');
-if (tabFromHash && ['resumen','proyectos','clientes','pagos','documentos','password','admin'].includes(tabFromHash)) {
+if (tabFromHash && ['resumen','proyectos','avance','clientes','pagos','documentos','password','admin'].includes(tabFromHash)) {
   loadTab(tabFromHash);
 } else {
   loadTab(defaultTab);
