@@ -130,11 +130,45 @@ const CLIENTES = <?= json_encode($clientes) ?>;
       <div class="stat-box" style="padding:0.5rem 1rem"><div class="num" style="font-size:1rem;color:#dc2626">$<?= number_format($atrasado,0,',','.') ?></div><div class="label">Atrasado</div></div>
       <div class="stat-box" style="padding:0.5rem 1rem"><div class="num" style="font-size:1rem;color:#2563eb"><?= $docsCount ?> 📄</div><div class="label">Documentos</div></div>
     </div>
+    <?php
+      $budget = (float)($proj['budget_clp'] ?? 0);
+      $saldo = max(0, $budget - $pagado);
+      $pendCount = (int)$db->prepare('SELECT COUNT(*) FROM payments WHERE project_id = ? AND status = "pendiente"')->execute([$proj['id']]) ? $db->query('SELECT COUNT(*) FROM payments WHERE project_id = ? AND status = "pendiente"')->fetchColumn() : 0;
+      $ultimoPct = $db->prepare('SELECT percentage FROM progress_events WHERE project_id = ? ORDER BY event_date DESC, id DESC LIMIT 1');
+      $ultimoPct->execute([$proj['id']]); $lastPct = (int)($ultimoPct->fetchColumn() ?: 0);
+      $ultimosPagos = $db->prepare('SELECT concept, amount_clp, status, due_date FROM payments WHERE project_id = ? ORDER BY due_date DESC LIMIT 3');
+      $ultimosPagos->execute([$proj['id']]); $recentPays = $ultimosPagos->fetchAll();
+    ?>
+    <div class="stats-row" style="margin-bottom:1rem;grid-template-columns:repeat(4,1fr)">
+      <div class="stat-box" style="padding:0.5rem 1rem"><div class="num" style="font-size:1rem;color:#475569">$<?= number_format($budget,0,',','.') ?></div><div class="label">Presupuesto</div></div>
+      <div class="stat-box" style="padding:0.5rem 1rem"><div class="num" style="font-size:1rem;color:#059669">$<?= number_format($saldo,0,',','.') ?></div><div class="label">Saldo restante</div></div>
+      <div class="stat-box" style="padding:0.5rem 1rem"><div class="num" style="font-size:1rem;color:#f59e0b"><?= $pendCount ?> pend.</div><div class="label">Pagos pendientes</div></div>
+      <div class="stat-box" style="padding:0.5rem 1rem"><div class="num" style="font-size:1rem;color:#0d9488"><?= $lastPct ?>%</div><div class="label">Avance obra</div></div>
+    </div>
+    <?php if ($recentPays): ?>
+    <div class="card" style="margin-bottom:1rem">
+      <strong style="font-size:0.85rem;color:#475569">Últimos pagos</strong>
+      <table style="width:100%;margin-top:.5rem;font-size:.85rem;border-collapse:collapse">
+        <thead><tr style="color:#64748b;text-align:left"><th style="padding:.35rem .5rem">Concepto</th><th style="padding:.35rem .5rem">Monto</th><th style="padding:.35rem .5rem">Vence</th><th style="padding:.35rem .5rem">Estado</th></tr></thead>
+        <tbody>
+          <?php foreach ($recentPays as $r): $rs = ($r['status']=='pendiente' && strtotime($r['due_date'])<time()) ? 'atrasado' : $r['status']; ?>
+          <tr style="border-top:1px solid #f1f5f9">
+            <td style="padding:.4rem .5rem"><?= htmlspecialchars($r['concept']) ?></td>
+            <td style="padding:.4rem .5rem">$<?= number_format($r['amount_clp'],0,',','.') ?></td>
+            <td style="padding:.4rem .5rem;color:<?= $rs==='atrasado'?'#dc2626':'#64748b' ?>"><?= $r['due_date'] ?></td>
+            <td style="padding:.4rem .5rem"><span class="status <?= $rs ?>" style="font-size:.75rem"><?= $rs ?></span></td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+    <?php endif; ?>
     <div class="search-bar">
       <strong>Detalle</strong>
       <?php if ($isStaff): ?>
       <button class="btn btn-primary btn-sm" onclick="editarProyecto(<?= $proj['id'] ?>)">Editar</button>
       <button class="btn btn-outline btn-sm" onclick="cambiarEstadoProyecto(<?= $proj['id'] ?>)">Cambiar estado</button>
+      <button class="btn btn-outline btn-sm" onclick="quickAvance(<?= $proj['id'] ?>, '<?= htmlspecialchars($proj['name'], ENT_QUOTES) ?>')">⚡ Registrar avance rápido</button>
       <button class="btn btn-danger btn-sm" onclick="eliminarProyecto(<?= $proj['id'] ?>)">Eliminar</button>
       <?php endif; ?>
     </div>
@@ -249,7 +283,31 @@ async function cambiarEstadoSubmit(form, id) {
 }
 function eliminarProyecto(id) {
   if (!confirm('¿Eliminar este proyecto? También se borrarán sus pagos y documentos.')) return;
-  fetch('/api/projects.php', {method:'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: new URLSearchParams({action:'delete',id}).toString()})
+  fetch('/api/projects.php', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: new URLSearchParams({action:'delete',id}).toString()})
     .then(r=>r.json()).then(d=>{ if(d.ok){ showToast('Proyecto eliminado'); loadTab('proyectos'); } else showToast(d.error,'error'); });
+}
+function quickAvance(projectId, projectName) {
+  openModal(`<h3>Registrar avance rápido — ${projectName}</h3>
+    <form id="quickAvanceForm" onsubmit="return saveQuickAvance(this, ${projectId})">
+      <input type="hidden" name="project_id" value="${projectId}">
+      <label>Título</label><input name="title" placeholder="Ej: Fundaciones completadas" required>
+      <label>Descripción</label><textarea name="description" rows="3" placeholder="Resumen del avance..."></textarea>
+      <label>Fecha</label><input type="date" name="event_date" value="${new Date().toISOString().slice(0,10)}" required>
+      <label>% de avance (0-100)</label><input type="number" name="percentage" min="0" max="100" value="0">
+      <label>Tipo</label><select name="event_type"><option value="daily_log">Avance diario</option><option value="milestone">Hito / Inspección</option></select>
+      <div class="modal-actions">
+        <button type="button" class="btn-outline" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn-primary">Guardar avance</button>
+      </div>
+    </form>`);
+}
+function saveQuickAvance(form, projectId) {
+  const fd = new FormData(form);
+  fd.set('action', 'create');
+  return fetch('/api/progress.php', { method:'POST', body: new URLSearchParams(fd).toString(), headers:{'Content-Type':'application/x-www-form-urlencoded'} })
+    .then(r=>r.json()).then(d=>{
+      if(d.ok){ showToast('Avance rápido registrado ✅'); closeModal(); loadTab('proyectos'); return false; }
+      showToast(d.error,'error'); return false;
+    });
 }
 </script>

@@ -5,7 +5,11 @@ session_start();
 $userId = $_SESSION['user_id'] ?? null;
 $userRole = $_SESSION['user_role'] ?? null;
 $staff = in_array($userRole, ['admin', 'staff', 'client']);
-if (!$userId) exit;
+if (!$userId) {
+    header('Content-Type: application/json');
+    echo json_encode(['ok' => false, 'error' => 'No autenticado']);
+    exit;
+}
 $db = Database::get();
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';

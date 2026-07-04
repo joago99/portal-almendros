@@ -18,6 +18,15 @@ if ($userRole === 'client') {
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
+// GET un solo pago (debe ir ANTES del if($action) general)
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'get' && isset($_GET['id'])) {
+  header('Content-Type: application/json');
+  $stmt = $db->prepare('SELECT * FROM payments WHERE id = ?');
+  $stmt->execute([(int)$_GET['id']]);
+  echo json_encode($stmt->fetch(PDO::FETCH_ASSOC) ?: ['ok'=>false]);
+  exit;
+}
+
 // ─── Backend actions (JSON) ───
 if ($action) {
   header('Content-Type: application/json');

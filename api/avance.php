@@ -45,7 +45,7 @@ $isStaff = in_array($userRole, ['admin','staff']);
   <div class="progress-controls">
     <div>
       <label>Obra</label>
-      <select id="avProyecto" onchange="loadTimeline()">
+      <select id="avProyecto" onchange="cargarAvance()">
         <option value="">— Selecciona una obra —</option>
         <?php foreach ($projects as $p): ?>
           <option value="<?= $p['id'] ?>">
@@ -54,6 +54,7 @@ $isStaff = in_array($userRole, ['admin','staff']);
         <?php endforeach; ?>
       </select>
     </div>
+    <button class="btn-outline" id="btnCargarAvance" onclick="cargarAvance()" style="display:none">⟳ Cargar avances</button>
     <?php if ($isStaff): ?>
       <button class="btn-green" id="btnNuevoAvance" onclick="nuevoAvance()" style="display:none">+ Registrar avance diario</button>
     <?php endif; ?>
@@ -68,16 +69,19 @@ $isStaff = in_array($userRole, ['admin','staff']);
 const ROLE = '<?= $userRole ?>';
 const IS_STAFF = <?= json_encode($isStaff) ?>;
 
-function loadTimeline() {
+function cargarAvance() {
   const pid = document.getElementById('avProyecto').value;
   const box = document.getElementById('tlContainer');
   const btn = document.getElementById('btnNuevoAvance');
+  const reloadBtn = document.getElementById('btnCargarAvance');
   if (!pid) {
     box.innerHTML = '<div class="empty-state"><p>Selecciona una obra para ver los avances registrados</p></div>';
     if (btn) btn.style.display = 'none';
+    if (reloadBtn) reloadBtn.style.display = 'none';
     return;
   }
   if (btn) btn.style.display = 'inline-block';
+  if (reloadBtn) reloadBtn.style.display = 'inline-block';
   box.innerHTML = '<div class="empty-state">Cargando avances...</div>';
   fetch('/api/progress.php?action=list&project_id=' + pid)
     .then(r => r.json()).then(d => {
@@ -158,7 +162,7 @@ function saveAvance(f) {
     method:'POST', body: new URLSearchParams(fd).toString(),
     headers:{'Content-Type':'application/x-www-form-urlencoded'}
   }).then(r => r.json()).then(d => {
-    if (d.ok) { showToast('Avance registrado ✅'); closeModal(); loadTimeline(); return false; }
+    if (d.ok) { showToast('Avance registrado ✅'); closeModal(); cargarAvance(); return false; }
     showToast(d.error, 'error'); return false;
   });
 }
@@ -186,7 +190,7 @@ function updateAvance(f, id) {
   fd.set('action','update'); fd.set('id', id);
   return fetch('/api/progress.php', { method:'POST', body: new URLSearchParams(fd).toString(), headers:{'Content-Type':'application/x-www-form-urlencoded'} })
     .then(r=>r.json()).then(d=>{
-      if(d.ok){ showToast('Actualizado ✅'); closeModal(); loadTimeline(); return false; }
+      if(d.ok){ showToast('Actualizado ✅'); closeModal(); cargarAvance(); return false; }
       showToast(d.error,'error'); return false;
     });
 }
@@ -195,7 +199,7 @@ function delAvance(id) {
   if (!confirm('¿Eliminar avance? También se borrarán sus fotos.')) return;
   fetch('/api/progress.php', { method:'POST', body: new URLSearchParams({action:'delete',id}).toString(), headers:{'Content-Type':'application/x-www-form-urlencoded'} })
     .then(r=>r.json()).then(d=>{
-      if(d.ok){ showToast('Avance eliminado'); loadTimeline(); }
+      if(d.ok){ showToast('Avance eliminado'); cargarAvance(); }
       else showToast(d.error,'error');
     });
 }

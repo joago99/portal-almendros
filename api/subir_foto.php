@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/../db.php';
-require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/config.php';
 session_start();
 $userId = $_SESSION['user_id'] ?? null;
 $userRole = $_SESSION['user_role'] ?? null;

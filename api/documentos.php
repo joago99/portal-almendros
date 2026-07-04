@@ -73,4 +73,102 @@ $projects = $db->query('SELECT p.id, p.name, COALESCE(c.name,"") as client FROM 
 $clients = $db->query('SELECT id, name FROM clients ORDER BY name')->fetchAll();
 $where = $docProject ? 'WHERE d.project_id = '.(int)$docProject : ($docClient ? 'WHERE p.client_id = '.(int)$docClient : ($clientFilter ? 'WHERE p.client_id = '.(int)$clientFilter : ''));
 $docs = $db->query('SELECT d.*, p.name as proyecto, c.name as cliente, u.name as uploader FROM documents d LEFT JOIN projects p ON p.id = d.project_id LEFT JOIN clients c ON c.id = p.client_id LEFT JOIN app_users u ON u.id = d.uploaded_by '.$where.' ORDER BY d.uploaded_at DESC LIMIT 100')->fetchAll();
-?>
+$fileBase = '/uploads/';
+?><style>
+.doc-wrap{display:flex;flex-direction:column;gap:1rem;}
+.doc-controls{display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end;}
+.doc-controls label{font-size:.8rem;font-weight:600;color:#64748b;display:block;margin-bottom:.25rem;}
+.doc-controls select,.doc-controls input{padding:.45rem .7rem;border:1px solid #cbd5e1;border-radius:8px;font-size:.85rem;font-family:inherit;background:#fff;}
+.doc-controls select{min-width:260px;}
+.btn-primary{background:#0d9488;color:#fff;border-color:#0d9488;padding:.45rem 1rem;border-radius:8px;font-size:.85rem;font-weight:500;cursor:pointer;border:1px solid transparent;}
+.btn-primary:hover{background:#0f766e;}
+.btn-outline{background:#fff;color:#475569;border:1px solid #cbd5e1;padding:.35rem .7rem;border-radius:8px;font-size:.8rem;cursor:pointer;}
+.btn-outline:hover{background:#f8fafc;}
+.btn-danger-text{background:none;color:#dc2626;border:1px solid #fecaca;padding:.35rem .7rem;border-radius:8px;font-size:.8rem;cursor:pointer;}
+.btn-danger-text:hover{background:#fef2f2;}
+.doc-card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;}
+.doc-card a{color:#0d9488;font-weight:500;text-decoration:none;}
+.doc-card a:hover{text-decoration:underline;}
+.doc-meta{font-size:.8rem;color:#64748b;}
+.empty-state{text-align:center;padding:2.5rem 1rem;color:#94a3b8;}
+</style>
+<div class="doc-wrap">
+  <div class="doc-controls">
+    <div>
+      <label>Proyecto</label>
+      <select id="docProyecto" onchange="loadDocs()">
+        <option value="">— Todos —</option>
+        <?php foreach ($projects as $p): ?>
+          <option value="<?= $p['id'] ?>" <?= $docProject == $p['id'] ? 'selected' : ''?>>
+            <?= htmlspecialchars($p['name']) ?> (<?= htmlspecialchars($p['client']) ?>)
+          </option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <?php if ($staff): ?>
+    <button class="btn-primary" onclick="openDocModal()">+ Subir documento</button>
+    <?php endif; ?>
+  </div>
+  <div id="docsContainer">
+    <?php if (!$docs): ?>
+      <div class="empty-state"><p>Sin documentos para el filtro seleccionado</p></div>
+    <?php else: ?>
+      <?php foreach ($docs as $d): ?>
+      <div class="doc-card">
+        <div>
+          <a href="<?= $fileBase . htmlspecialchars($d['file_path']) ?>" target="_blank" rel="noopener">📄 <?= htmlspecialchars($d['title']) ?></a>
+          <div class="doc-meta"><?= htmlspecialchars($d['tipo'] ?? 'documento') ?> · <?= htmlspecialchars($d['proyecto'] ?? '') ?> · <?= htmlspecialchars($d['uploader'] ?? '') ?> · <?= $d['uploaded_at'] ?></div>
+        </div>
+        <?php if ($staff): ?>
+        <button class="btn-danger-text" onclick="deleteDoc(<?= $d['id'] ?>)">Eliminar</button>
+        <?php endif; ?>
+      </div>
+      <?php endforeach; ?>
+    <?php endif; ?>
+  </div>
+</div>
+<script>
+function loadDocs(){
+  const pid = document.getElementById('docProyecto').value;
+  const sep = location.search.includes('client_id') ? '&' : '?';
+  const url = '/api/documentos.php' + (pid ? '?project_id=' + encodeURIComponent(pid) : '') + (location.search.includes('client_id=') ? sep + location.search.split('?')[1] : '');
+  fetch(url).then(r=>r.text()).then(html=>{ document.getElementById('docsContainer').innerHTML = html; });
+}
+function openDocModal(){
+  const opts = document.getElementById('docProyecto')?.value || '';
+  const items = <?= json_encode($projects) ?>;
+  const optsHtml = items.map(p=>`<option value="${p.id}">${p.client} - ${p.name}</option>`).join('');
+  openModal(`<h3>Subir documento</h3>
+    <form id="docForm" onsubmit="return saveDoc(this)">
+      <label>Proyecto</label><select name="project_id" required>${optsHtml}</select>
+      <label>Tipo</label><select name="type">
+        <option value="planos">Planos</option>
+        <option value="informe">Informe</option>
+        <option value="foto">Foto</option>
+        <option value="contrato">Contrato</option>
+        <option value="otro">Otro</option>
+      </select>
+      <label>Título</label><input name="title" placeholder="Descripción corta" required>
+      <label>Archivo</label><input type="file" name="file" required>
+      <p style="font-size:.75rem;color:#94a3b8">Formatos permitidos: PDF, JPG, PNG, DOCX. Máx ~10MB.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn-outline" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn-primary">Subir</button>
+      </div>
+    </form>`);
+}
+function saveDoc(form){
+  const fd = new FormData(form);
+  fetch('/api/documentos.php?action=upload', {method:'POST', body:fd})
+    .then(r=>r.json()).then(d=>{
+      if(d.ok){ showToast('Documento subido ✅'); closeModal(); loadDocs(); return false; }
+      showToast(d.error || 'Error', 'error'); return false;
+    });
+  return false;
+}
+function deleteDoc(id){
+  if(!confirm('¿Eliminar este documento?')) return;
+  fetch('/api/documentos.php?action=delete', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: new URLSearchParams({id}).toString()})
+    .then(r=>r.json()).then(d=>{ if(d.ok){ showToast('Documento eliminado'); loadDocs(); } else showToast(d.error,'error'); });
+}
+</script>
