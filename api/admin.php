@@ -16,10 +16,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $pass = $_POST['password'] ?? '';
     $name = $_POST['name'] ?? '';
-    $role = $_POST['role'] ?? 'staff';
+    $role = strtolower(trim($_POST['role'] ?? 'staff'));
     $clientId = $_POST['client_id'] ?? null;
     $expires = $_POST['expires_at'] ?? null;
     if (!$email || !$pass || !$name) { echo json_encode(['ok'=>false,'error'=>'Faltan datos']); exit; }
+    if (!in_array($role, ALLOWED_ROLES, true)) { echo json_encode(['ok'=>false,'error'=>'Rol inválido']); exit; }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) { echo json_encode(['ok'=>false,'error'=>'Email inválido']); exit; }
     $chk = $db->prepare('SELECT id FROM app_users WHERE email = ?');
     $chk->execute([$email]);
     if ($chk->fetch()) { echo json_encode(['ok'=>false,'error'=>'Email ya existe']); exit; }
@@ -31,9 +33,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($action === 'update_user') {
     $uid = (int)($_POST['user_id'] ?? 0);
     if (!$uid) { echo json_encode(['ok'=>false,'error'=>'ID requerido']); exit; }
-    if (isset($_POST['email'])) $db->prepare('UPDATE app_users SET email = ? WHERE id = ?')->execute([$_POST['email'], $uid]);
+    if (isset($_POST['email'])) {
+        $email = strtolower(trim((string)$_POST['email']));
+        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) { echo json_encode(['ok'=>false,'error'=>'Email inválido']); exit; }
+        $db->prepare('UPDATE app_users SET email = ? WHERE id = ?')->execute([$email, $uid]);
+    }
     if (isset($_POST['name'])) $db->prepare('UPDATE app_users SET name = ? WHERE id = ?')->execute([$_POST['name'], $uid]);
-    if (isset($_POST['role'])) $db->prepare('UPDATE app_users SET role = ? WHERE id = ?')->execute([$_POST['role'], $uid]);
+    if (isset($_POST['role'])) {
+        $role = strtolower(trim((string)$_POST['role']));
+        if (!in_array($role, ALLOWED_ROLES, true)) { echo json_encode(['ok'=>false,'error'=>'Rol inválido']); exit; }
+        $db->prepare('UPDATE app_users SET role = ? WHERE id = ?')->execute([$role, $uid]);
+    }
     if (isset($_POST['client_id'])) $db->prepare('UPDATE app_users SET client_id = ? WHERE id = ?')->execute([$_POST['client_id'] ? (int)$_POST['client_id'] : null, $uid]);
     if (isset($_POST['expires_at'])) $db->prepare('UPDATE app_users SET expires_at = ? WHERE id = ?')->execute([$_POST['expires_at'] ?: null, $uid]);
     if (!empty($_POST['password'])) {

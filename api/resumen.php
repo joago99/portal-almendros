@@ -1,35 +1,50 @@
 <?php
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/config.php';
-session_start();
-$userId = $_SESSION['user_id'] ?? null;
-$userRole = $_SESSION['user_role'] ?? null;
-if (!$userId) {
-    header('Content-Type: application/json');
-    http_response_code(401);
-    echo json_encode(['ok'=>false,'error'=>'No autenticado']);
-    exit;
-}
+$auth = require_auth();
+$userId = $auth['user_id'];
+$userRole = $auth['role'];
 $db = Database::get();
 
+// Client filter: force scoped data when user is a client
+$clientFilter = null;
+if ($userRole === 'client') {
+    $st = $db->prepare('SELECT client_id FROM app_users WHERE id = ?');
+    $st->execute([$userId]);
+    $cu = $st->fetch();
+    $clientFilter = $cu ? (int)$cu['client_id'] : null;
+}
+
 // Stats
-$totalProyectos = $db->query('SELECT COUNT(*) as c FROM projects')->fetch()['c'];
+$proyWhere = $clientFilter ? ' WHERE client_id = ' . (int)$clientFilter : '';
+$totalProyectos = $db->query('SELECT COUNT(*) as c FROM projects' . $proyWhere)->fetch()['c'];
 $totalClientes = $db->query('SELECT COUNT(*) as c FROM clients')->fetch()['c'];
-$pagosPendientes = $db->query('SELECT COALESCE(SUM(amount_clp),0) as t FROM payments WHERE status = "pendiente" AND due_date >= date("now")')->fetch()['t'];
-$pagosAtrasados = $db->query('SELECT COALESCE(SUM(amount_clp),0) as t FROM payments WHERE status = "pendiente" AND due_date < date("now")')->fetch()['t'];
-$totalCobrado = $db->query('SELECT COALESCE(SUM(amount_clp),0) as t FROM payments WHERE status = "pagado"')->fetch()['t'];
+
+$payJoin = $clientFilter ? ' JOIN projects p2 ON p2.id = payments.project_id WHERE p2.client_id = ' . (int)$clientFilter . ' AND ' : ' WHERE ';
+$pagosPendientes = $db->query('SELECT COALESCE(SUM(amount_clp),0) as t FROM payments' . $payJoin . 'status = "pendiente" AND due_date >= date("now")')->fetch()['t'];
+$pagosAtrasados = $db->query('SELECT COALESCE(SUM(amount_clp),0) as t FROM payments' . $payJoin . 'status = "pendiente" AND due_date < date("now")')->fetch()['t'];
+$totalCobrado = $db->query('SELECT COALESCE(SUM(amount_clp),0) as t FROM payments' . $payJoin . 'status = "pagado"')->fetch()['t'];
 
 // Proyectos activos
-$activos = $db->query('SELECT p.name, c.name as cliente, p.budget_clp, 
+$activosQ = 'SELECT p.name, c.name as cliente, p.budget_clp, 
     COALESCE((SELECT SUM(amount_clp) FROM payments WHERE project_id = p.id AND status = "pagado"),0) as pagado,
     COALESCE((SELECT SUM(amount_clp) FROM payments WHERE project_id = p.id AND status = "pendiente" AND due_date < date("now")),0) as atrasado
-    FROM projects p JOIN clients c ON c.id = p.client_id WHERE p.status = "activo" ORDER BY p.created_at DESC')->fetchAll();
+    FROM projects p JOIN clients c ON c.id = p.client_id WHERE p.status = "activo"';
+if ($clientFilter) {
+    $activosQ .= ' AND p.client_id = ' . (int)$clientFilter;
+}
+$activosQ .= ' ORDER BY p.created_at DESC';
+$activos = $db->query($activosQ)->fetchAll();
 
 // Pagos próximos a vencer (próximos 30 días)
-$proximos = $db->query('SELECT p.concept, p.amount_clp, p.due_date, pr.name as proyecto, c.name as cliente
+$proximosQ = 'SELECT p.concept, p.amount_clp, p.due_date, pr.name as proyecto, c.name as cliente
     FROM payments p JOIN projects pr ON pr.id = p.project_id JOIN clients c ON c.id = pr.client_id
-    WHERE p.status = "pendiente" AND p.due_date BETWEEN date("now") AND date("now", "+30 days")
-    ORDER BY p.due_date ASC LIMIT 5')->fetchAll();
+    WHERE p.status = "pendiente" AND p.due_date BETWEEN date("now") AND date("now", "+30 days")';
+if ($clientFilter) {
+    $proximosQ .= ' AND pr.client_id = ' . (int)$clientFilter;
+}
+$proximosQ .= ' ORDER BY p.due_date ASC LIMIT 5';
+$proximos = $db->query($proximosQ)->fetchAll();
 ?>
 <div class="stats-row">
   <div class="stat-box"><div class="num" style="color:#0d9488"><?= $totalProyectos ?></div><div class="label">Proyectos</div></div>

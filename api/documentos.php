@@ -1,16 +1,10 @@
 <?php
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/config.php';
-session_start();
-$userId = $_SESSION['user_id'] ?? null;
-$userRole = $_SESSION['user_role'] ?? null;
+$auth = require_auth();
+$userId = $auth['user_id'];
+$userRole = $auth['role'];
 $staff = in_array($userRole, ['admin','staff']);
-if (!$userId) {
-    header('Content-Type: application/json');
-    http_response_code(401);
-    echo json_encode(['ok'=>false,'error'=>'No autenticado']);
-    exit;
-}
 $db = Database::get();
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';

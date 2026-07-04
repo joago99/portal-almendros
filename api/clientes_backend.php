@@ -12,6 +12,10 @@ $action = $_GET['action'] ?? $_POST['action'] ?? '';
 if ($action === 'create') {
   $input = json_decode(file_get_contents('php://input'), true);
   if (!$input['name']) { echo json_encode(['ok'=>false,'error'=>'Nombre requerido']); exit; }
+  $email = $input['email'] ?? null;
+  $rut = $input['rut'] ?? null;
+  if ($email && !filter_var($email, FILTER_VALIDATE_EMAIL)) { echo json_encode(['ok'=>false,'error'=>'Email inválido']); exit; }
+  if ($rut && !preg_match('/^[0-9]{1,2}\\.[0-9]{3}\\.[0-9]{3}[-][0-9kK]{1}$/', str_replace('.', '', $rut))) { echo json_encode(['ok'=>false,'error'=>'RUT inválido']); exit; }
   $stmt = $db->prepare('INSERT INTO clients (name, email, rut, phone) VALUES (?,?,?,?)');
   $stmt->execute([$input['name'], $input['email']?:null, $input['rut']?:null, $input['phone']?:null]);
   echo json_encode(['ok'=>true, 'id'=>$db->lastInsertId()]); exit;
@@ -30,6 +34,8 @@ if ($action === 'update') {
   $rut = $_POST['rut'] ?? '';
   $phone = $_POST['phone'] ?? '';
   if (!$id || !$name) { echo json_encode(['ok'=>false,'error'=>'Datos inválidos']); exit; }
+  if ($email && !filter_var($email, FILTER_VALIDATE_EMAIL)) { echo json_encode(['ok'=>false,'error'=>'Email inválido']); exit; }
+  if ($rut && !preg_match('/^[0-9]{1,2}\\.[0-9]{3}\\.[0-9]{3}[-][0-9kK]{1}$/', str_replace('.', '', $rut))) { echo json_encode(['ok'=>false,'error'=>'RUT inválido']); exit; }
   $db->prepare('UPDATE clients SET name=?, email=?, rut=?, phone=? WHERE id=?')
     ->execute([$name, $email?:null, $rut?:null, $phone?:null, $id]);
   echo json_encode(['ok'=>true]); exit;
