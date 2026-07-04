@@ -107,6 +107,15 @@ $clientId = $_SESSION['client_id'] ?? null;
       .sidebar .name, .sidebar .role-badge, .nav-item span:not(.icon) { display: none; }
       .main-content { padding: 1rem; }
     }
+    @media (max-width: 640px) {
+      .sidebar { width: 100%; height: auto; position: relative; border-right: none; border-bottom: 1px solid #e2e8f0; }
+      .sidebar-nav { flex-direction: row; overflow-x: auto; }
+      .main-area { flex-direction: column; }
+      .main-header { padding: 1rem; }
+      .main-content { padding: 1rem; }
+      .tab-panel { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+    }
   </style>
 </head>
 <body>

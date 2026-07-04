@@ -27,8 +27,8 @@ if (!$isStaff && $userRole === 'client') {
 .progress-controls label { font-size:.8rem; font-weight:600; color:#64748b; display:block; margin-bottom:.25rem; }
 .progress-controls select, .progress-controls input { padding:.45rem .7rem; border:1px solid #cbd5e1; border-radius:8px; font-size:.85rem; font-family:inherit; background:#fff; }
 .progress-controls select { min-width:260px; }
-.btn-green { background:#16a34a; color:#fff; border-color:#16a34a; padding:.45rem 1rem; border-radius:8px; font-size:.85rem; font-weight:500; cursor:pointer; border:1px solid transparent; }
-.btn-green:hover { background:#14532d; }
+.btn-primary { background:#16a34a; color:#fff; border-color:#16a34a; padding:.45rem 1rem; border-radius:8px; font-size:.85rem; font-weight:500; cursor:pointer; border:1px solid transparent; }
+.btn-primary:hover { background:#14532d; }
 .btn-outline { background:#fff; color:#475569; border:1px solid #cbd5e1; padding:.35rem .7rem; border-radius:8px; font-size:.8rem; cursor:pointer; }
 .btn-outline:hover { background:#f8fafc; }
 .btn-danger-text { background:none; color:#dc2626; border:1px solid #fecaca; padding:.35rem .7rem; border-radius:8px; font-size:.8rem; cursor:pointer; }
@@ -67,7 +67,7 @@ if (!$isStaff && $userRole === 'client') {
     </div>
     <button class="btn-outline" id="btnCargarAvance" onclick="cargarAvance()" style="display:none">⟳ Cargar avances</button>
     <?php if ($isStaff): ?>
-      <button class="btn-green" id="btnNuevoAvance" onclick="nuevoAvance()" style="display:none">+ Registrar avance diario</button>
+      <button class="btn-primary" id="btnNuevoAvance" onclick="nuevoAvance()" style="display:none">+ Registrar avance diario</button>
     <?php endif; ?>
   </div>
 
@@ -147,7 +147,7 @@ function esc(s) { if (!s) return ''; return s.replace(/&/g,'&amp;').replace(/</g
 function nuevoAvance() {
   const pid = document.getElementById('avProyecto').value;
   if (!pid) { alert('Selecciona una obra primero'); return; }
-  openModal(`<h3>Registrar avance diario</h3>
+  openModal(`<h3>Registrar avance</h3>
     <form id="frmAvance" onsubmit="return saveAvance(this)">
       <input type="hidden" name="project_id" value="${pid}">
       <label>Título</label><input name="title" placeholder="Ej: Fundaciones listas" required>
@@ -160,7 +160,7 @@ function nuevoAvance() {
       </select>
       <div class="modal-actions">
         <button type="button" class="btn-outline" onclick="closeModal()">Cancelar</button>
-        <button type="submit" class="btn-green">Guardar avance</button>
+        <button type="submit" class="btn-primary">Guardar avance</button>
       </div>
     </form>
     <p style="font-size:.75rem;color:#94a3b8;margin-top:.75rem">Después de guardar podrás subir fotos del avance.</p>`);
@@ -191,7 +191,7 @@ function editAvance(id) {
           <label>% de avance</label><input type="number" name="percentage" min="0" max="100" value="${ev.percentage||0}">
           <div class="modal-actions">
             <button type="button" class="btn-outline" onclick="closeModal()">Cancelar</button>
-            <button type="submit" class="btn-green">Guardar</button>
+            <button type="submit" class="btn-primary">Guardar</button>
           </div>
         </form>`);
     });
@@ -226,7 +226,7 @@ function uploadPhotos(eventId) {
       <p style="font-size:.75rem;color:#94a3b8">JPG/PNG/WebP, máximo 5MB por foto. Puedes subir varias a la vez.</p>
       <div class="modal-actions">
         <button type="button" class="btn-outline" onclick="closeModal()">Cancelar</button>
-        <button type="submit" class="btn-green">Subir fotos</button>
+        <button type="submit" class="btn-primary">Subir fotos</button>
       </div>
     </form>`);
 }

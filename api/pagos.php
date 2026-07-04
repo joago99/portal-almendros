@@ -113,6 +113,7 @@ const TODAY = '<?= $today ?>';
 </div>
 
 <div class="card">
+  <?php if ($payments): ?>
   <table id="pagosTable">
     <tr><th>Cliente</th><th>Proyecto</th><th>Concepto</th><th>Monto</th><th>Vence</th><th>Pagado</th><th>Estado</th><?php if ($isStaff): ?><th></th><?php endif; ?></tr>
     <?php foreach ($payments as $p):
@@ -135,6 +136,9 @@ const TODAY = '<?= $today ?>';
     </tr>
     <?php endforeach; ?>
   </table>
+  <?php else: ?>
+  <div class="empty-state"><div class="icon">📋</div><p>No hay pagos registrados para este filtro</p></div>
+  <?php endif; ?>
 </div>
 
 <script>
@@ -172,16 +176,7 @@ async function crearPago(form) {
 }
 
 async function editarPagoModal(id) {
-  const res = await fetch('/api/pagos.php', {method:'POST', body: new URLSearchParams({action:'update',id, _fetch: '1'}).toString(), headers: {'Content-Type':'application/x-www-form-urlencoded'}});
-  // No: necesito obtener los datos del pago. Uso un endpoint get.
-  // En lugar de eso, busco en la fila.
-  const row = document.querySelector(`.pago-row:nth-child(${id+2})`); // offset
-  // Mejor: incrustar datos como data-attrs
-  // MEJOR: paso a cargar vía fetch de un endpoint get
-  // Voy a buscar los datos inline
-  const cells = document.querySelector(`.pago-row:has(td button[onclick*="${id}"])`)?.querySelectorAll('td');
-  if (!cells) { showToast('Error: no se encontró el pago', 'error'); return; }
-  // No funciona bien, mejor usar un pequeño endpoint get
+  if (!id) return;
   fetch('/api/pagos.php?action=get&id='+id).then(r=>r.json()).then(p => {
     if (!p.id) { showToast('Error al cargar pago', 'error'); return; }
     const projOpts = PAY_PROJECTS.map(pr => `<option value="${pr.id}" ${pr.id==p.project_id?'selected':''}>${pr.client} - ${pr.name}</option>`).join('');

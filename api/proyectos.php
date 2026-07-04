@@ -117,7 +117,7 @@ const CLIENTES = <?= json_encode($clientes) ?>;
   $pct = ($proj['budget_clp'] ?? 0) > 0 ? round(($pagado / $proj['budget_clp']) * 100) : 0;
 ?>
 <div class="card proyecto-card" data-estado="<?= $proj['status'] ?>" data-search="<?= strtolower(htmlspecialchars($proj['name'].' '.$proj['client_name'])) ?>">
-  <div class="card-header" style="cursor:pointer" onclick="toggleProyecto('proj-<?= $proj['id'] ?>')">
+  <button class="card-header" style="cursor:pointer;min-height:44px;background:none;border:none;width:100%;text-align:left;padding:0;display:flex;justify-content:space-between;align-items:center" onclick="toggleProyecto('proj-<?= $proj['id'] ?>')" aria-expanded="false" aria-controls="proj-<?= $proj['id'] ?>">
     <div>
       <h2 style="font-size:1.1rem"><?= htmlspecialchars($proj['name']) ?></h2>
       <span style="font-size:0.8rem;color:#64748b"><?= htmlspecialchars($proj['client_name'] ?? 'Sin cliente') ?> — Estado: <strong><?= $proj['status'] ?></strong></span>
@@ -125,9 +125,9 @@ const CLIENTES = <?= json_encode($clientes) ?>;
     <div style="display:flex;align-items:center;gap:0.75rem">
       <span class="status <?= $proj['status'] ?>"><?= $proj['status'] ?></span>
       <span style="font-size:0.8rem;color:#64748b"><?= $pct ?>%</span>
-      <span style="font-size:0.8rem">▼</span>
+      <span class="chevron" style="font-size:0.8rem;transition:transform .2s">▼</span>
     </div>
-  </div>
+  </button>
   <div id="proj-<?= $proj['id'] ?>" style="display:none;margin-top:1rem">
     <div class="stats-row" style="margin-bottom:1rem;grid-template-columns:repeat(4,1fr)">
       <div class="stat-box" style="padding:0.5rem 1rem"><div class="num" style="font-size:1rem;color:#16a34a">$<?= number_format($pagado,0,',','.') ?></div><div class="label">Pagado</div></div>
@@ -195,7 +195,13 @@ const CLIENTES = <?= json_encode($clientes) ?>;
 <script>
 function toggleProyecto(id) {
   const el = document.getElementById(id);
-  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  if (el) {
+    const btn = document.querySelector(`button[aria-controls="${id}"]`);
+    const chevron = btn && btn.querySelector('.chevron');
+    if (btn) btn.setAttribute('aria-expanded', el.style.display === 'none' ? 'true' : 'false');
+    if (chevron) chevron.style.transform = el.style.display === 'none' ? 'rotate(0deg)' : 'rotate(-90deg)';
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  }
 }
 document.getElementById('searchProyectos')?.addEventListener('input', function() {
   const q = this.value.toLowerCase();
