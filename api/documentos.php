@@ -144,10 +144,10 @@ function openDocModal(){
     <form id="docForm" onsubmit="return saveDoc(this)">
       <label>Proyecto</label><select name="project_id" required>${optsHtml}</select>
       <label>Tipo</label><select name="type">
-        <option value="planos">Planos</option>
-        <option value="informe">Informe</option>
-        <option value="foto">Foto</option>
-        <option value="contrato">Contrato</option>
+        <option value="plano">Plano</option>
+        <option value="presupuesto">Presupuesto</option>
+        <option value="avance">Avance</option>
+        <option value="legal">Legal / Permiso</option>
         <option value="otro">Otro</option>
       </select>
       <label>Título</label><input name="title" placeholder="Descripción corta" required>
