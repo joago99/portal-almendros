@@ -5,7 +5,12 @@ session_start();
 $userId = $_SESSION['user_id'] ?? null;
 $userRole = $_SESSION['user_role'] ?? null;
 $isStaff = in_array($userRole, ['admin','staff']);
-if (!$userId) exit;
+if (!$userId) {
+    header('Content-Type: application/json');
+    http_response_code(401);
+    echo json_encode(['ok'=>false,'error'=>'No autenticado']);
+    exit;
+}
 $db = Database::get();
 
 // Client users: force filter by their assigned client
@@ -69,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'change_status' && ($_P
 }
 
 // ─── HTML view ───
-$clientFilter = $_GET['client_id'] ?? null;
+$clientFilter = $clientFilter ?: ($_GET['client_id'] ?? null);
 $search = $_GET['q'] ?? '';
 $statusFilter = $_GET['estado'] ?? '';
 

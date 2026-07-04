@@ -88,22 +88,28 @@ if ($action) {
                 echo json_encode(['ok'=>false,'error'=>'No autorizado']); exit;
             }
         }
-        $events = $db->query("
+        $sqlEvents = "
             SELECT e.*, u.name as autor, c.name as client_name
             FROM progress_events e
             JOIN app_users u ON u.id = e.created_by
             JOIN projects p ON p.id = e.project_id
             LEFT JOIN clients c ON c.id = p.client_id
             WHERE e.project_id = $projId
-            ORDER BY e.event_date DESC, e.id DESC
-        ")->fetchAll();
+        ";
+        if ($userRole === 'client' && $clientFilter) {
+            $sqlEvents .= ' AND p.client_id = ' . (int)$clientFilter;
+        }
+        $sqlEvents .= ' ORDER BY e.event_date DESC, e.id DESC';
+        $events = $db->query($sqlEvents)->fetchAll();
 
         // Load photos for all events
         $eventIds = array_map(fn($e) => $e['id'], $events);
         $photosByEvent = [];
         if ($eventIds) {
-            $in = implode(',', array_map('intval', $eventIds));
-            $fotos = $db->query("SELECT * FROM progress_photos WHERE event_id IN ($in) ORDER BY uploaded_at ASC")->fetchAll();
+            $placeholders = implode(',', array_fill(0, count($eventIds), '?'));
+            $stmt = $db->prepare("SELECT * FROM progress_photos WHERE event_id IN ($placeholders) ORDER BY uploaded_at ASC");
+            $stmt->execute($eventIds);
+            $fotos = $stmt->fetchAll();
             foreach ($fotos as $f) {
                 $photosByEvent[$f['event_id']][] = ['url'=>$f['url'], 'caption'=>$f['caption']];
             }

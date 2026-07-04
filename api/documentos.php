@@ -5,7 +5,12 @@ session_start();
 $userId = $_SESSION['user_id'] ?? null;
 $userRole = $_SESSION['user_role'] ?? null;
 $staff = in_array($userRole, ['admin','staff']);
-if (!$userId) exit;
+if (!$userId) {
+    header('Content-Type: application/json');
+    http_response_code(401);
+    echo json_encode(['ok'=>false,'error'=>'No autenticado']);
+    exit;
+}
 $db = Database::get();
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
@@ -55,12 +60,15 @@ if ($action) {
   }
   if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'delete_multi') {
     $ids = array_map('intval', explode(',', $_POST['ids'] ?? ''));
+    if (!$ids) { echo json_encode(['ok'=>false,'error'=>'IDs inválidos']); exit; }
     foreach ($ids as $id) {
       $f = $db->prepare('SELECT file_path FROM documents WHERE id = ?');
       $f->execute([$id]); $doc = $f->fetch();
       if ($doc) { $p = __DIR__ . '/../uploads/' . $doc['file_path']; if (file_exists($p)) unlink($p); }
     }
-    $db->query('DELETE FROM documents WHERE id IN (' . implode(',', $ids) . ')');
+    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+    $stmt = $db->prepare("DELETE FROM documents WHERE id IN ($placeholders)");
+    $stmt->execute($ids);
     echo json_encode(['ok'=>true]); exit;
   }
   echo json_encode(['ok'=>false,'error'=>'Acción no válida']); exit;

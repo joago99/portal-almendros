@@ -18,13 +18,17 @@ if ($userRole === 'client') {
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
-// GET un solo pago (debe ir ANTES del if($action) general)
+if (!$userId) {
+    header('Content-Type: application/json');
+    http_response_code(401);
+    echo json_encode(['ok'=>false,'error'=>'No autenticado']); exit;
+}
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'get' && isset($_GET['id'])) {
-  header('Content-Type: application/json');
-  $stmt = $db->prepare('SELECT * FROM payments WHERE id = ?');
-  $stmt->execute([(int)$_GET['id']]);
-  echo json_encode($stmt->fetch(PDO::FETCH_ASSOC) ?: ['ok'=>false]);
-  exit;
+    header('Content-Type: application/json');
+    if (!$isStaff) { echo json_encode(['ok'=>false,'error'=>'No autorizado']); exit; }
+    $stmt = $db->prepare('SELECT * FROM payments WHERE id = ?');
+    $stmt->execute([(int)$_GET['id']]);
+    echo json_encode($stmt->fetch(PDO::FETCH_ASSOC) ?: ['ok'=>false]); exit;
 }
 
 // ─── Backend actions (JSON) ───
@@ -57,13 +61,7 @@ if ($action) {
   }
   echo json_encode(['ok'=>false,'error'=>'Acción no válida']); exit;
 }
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'get' && isset($_GET['id'])) {
-  header('Content-Type: application/json');
-  $stmt = $db->prepare('SELECT * FROM payments WHERE id = ?');
-  $stmt->execute([(int)$_GET['id']]);
-  echo json_encode($stmt->fetch(PDO::FETCH_ASSOC) ?: ['ok'=>false]);
-  exit;
-}
+
 // ─── HTML view ───
 // ─── HTML view ───
 $filterStatus = $_GET['status'] ?? 'todos';

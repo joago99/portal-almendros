@@ -4,11 +4,22 @@ require_once __DIR__ . '/config.php';
 session_start();
 $userId = $_SESSION['user_id'] ?? null;
 $userRole = $_SESSION['user_role'] ?? null;
-if (!$userId) { http_response_code(401); exit; }
+if (!$userId) {
+    header('Content-Type: application/json');
+    http_response_code(401);
+    echo json_encode(['ok'=>false,'error'=>'No autenticado']);
+    exit;
+}
 $db = Database::get();
 
 $projects = $db->query('SELECT p.id, p.name, c.name as client_name FROM projects p LEFT JOIN clients c ON c.id = p.client_id ORDER BY p.created_at DESC')->fetchAll();
 $isStaff = in_array($userRole, ['admin','staff']);
+if (!$isStaff && $userRole === 'client') {
+  $me = $db->prepare('SELECT client_id FROM app_users WHERE id = ?');
+  $me->execute([$userId]); $u = $me->fetch();
+  $myClientId = $u ? (int)$u['client_id'] : null;
+  $projects = array_values(array_filter($projects, fn($p) => (int)($p['client_id'] ?? 0) === $myClientId));
+}
 ?>
 <style>
 .progress-wrap { display:flex; flex-direction:column; gap:1rem; }
