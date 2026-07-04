@@ -144,10 +144,38 @@ function renderTL(items, btn) {
 
 function esc(s) { if (!s) return ''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-function nuevoAvance() {
-  const pid = document.getElementById('avProyecto').value;
+function openAvanceModal(projectId, eventId) {
+  const pid = eventId ? document.getElementById('avProyecto').value : projectId;
   if (!pid) { alert('Selecciona una obra primero'); return; }
-  openModal(`<h3>Registrar avance</h3>
+  const isEdit = !!eventId;
+  let title = 'Registrar avance';
+  let data = {project_id: pid, title:'', description:'', event_date: new Date().toISOString().slice(0,10), percentage:0, event_type:'daily_log'};
+  if (isEdit) {
+    title = 'Editar avance';
+    fetch('/api/progress.php?action=list&project_id=' + pid)
+      .then(r=>r.json()).then(d => {
+        const ev = (d.data||[]).find(x => x.id == eventId);
+        if (!ev) return showToast('Error','error');
+        openModal(`<h3>${title}</h3>
+          <form id="frmAvance" onsubmit="return saveAvance(this, ${eventId})">
+            <input type="hidden" name="project_id" value="${pid}">
+            <label>Título</label><input name="title" value="${esc(ev.title).replace(/\"/g,'&quot;')}" required>
+            <label>Descripción</label><textarea name="description" rows="3">${esc(ev.description||'')}</textarea>
+            <label>Fecha</label><input type="date" name="event_date" value="${ev.event_date}" required>
+            <label>% de avance estimado (0-100)</label><input type="number" name="percentage" min="0" max="100" value="${ev.percentage||0}">
+            <label>Tipo</label><select name="event_type">
+              <option value="daily_log" ${ev.event_type==='daily_log'?'selected':''}>Avance diario</option>
+              <option value="milestone" ${ev.event_type==='milestone'?'selected':''}>Hito / Inspección</option>
+            </select>
+            <div class="modal-actions">
+              <button type="button" class="btn-outline" onclick="closeModal()">Cancelar</button>
+              <button type="submit" class="btn-primary">Guardar cambios</button>
+            </div>
+          </form>`);
+      });
+    return;
+  }
+  openModal(`<h3>${title}</h3>
     <form id="frmAvance" onsubmit="return saveAvance(this)">
       <input type="hidden" name="project_id" value="${pid}">
       <label>Título</label><input name="title" placeholder="Ej: Fundaciones listas" required>
@@ -166,36 +194,38 @@ function nuevoAvance() {
     <p style="font-size:.75rem;color:#94a3b8;margin-top:.75rem">Después de guardar podrás subir fotos del avance.</p>`);
 }
 
-function saveAvance(f) {
+function saveAvance(f, eventId) {
   const fd = new FormData(f);
-  fd.set('action', 'create');
+  fd.set('action', eventId ? 'update' : 'create');
+  if (eventId) fd.set('id', eventId);
   return fetch('/api/progress.php', {
     method:'POST', body: new URLSearchParams(fd).toString(),
     headers:{'Content-Type':'application/x-www-form-urlencoded'}
   }).then(r => r.json()).then(d => {
-    if (d.ok) { showToast('Avance registrado ✅'); closeModal(); cargarAvance(); return false; }
+    if (d.ok) {
+      closeModal();
+      const sel = document.getElementById('avProyecto');
+      const prevPid = sel ? sel.value : null;
+      cargarAvance();
+      if (prevPid && sel) sel.value = prevPid;
+      const box = document.getElementById('tlContainer');
+      if (box && box.firstChild) {
+        const banner = document.createElement('div');
+        banner.style.cssText = 'background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;border-radius:8px;padding:.6rem 1rem;margin-bottom:.75rem;font-size:.85rem';
+        banner.textContent = 'Avance guardado — agrega fotos o registra otro';
+        box.insertBefore(banner, box.firstChild);
+      }
+      showToast(eventId ? 'Avance actualizado ✅' : 'Avance registrado ✅');
+      return false;
+    }
     showToast(d.error, 'error'); return false;
   });
 }
 
 function editAvance(id) {
-  fetch('/api/progress.php?action=list&project_id=' + document.getElementById('avProyecto').value)
-    .then(r=>r.json()).then(d => {
-      const ev = (d.data||[]).find(x => x.id == id);
-      if (!ev) return showToast('Error','error');
-      openModal(`<h3>Editar avance</h3>
-        <form onsubmit="return updateAvance(this,${id})">
-          <label>Título</label><input name="title" value="${esc(ev.title).replace(/"/g,'&quot;')}" required>
-          <label>Descripción</label><textarea name="description" rows="3">${esc(ev.description||'')}</textarea>
-          <label>Fecha</label><input type="date" name="event_date" value="${ev.event_date}">
-          <label>% de avance</label><input type="number" name="percentage" min="0" max="100" value="${ev.percentage||0}">
-          <div class="modal-actions">
-            <button type="button" class="btn-outline" onclick="closeModal()">Cancelar</button>
-            <button type="submit" class="btn-primary">Guardar</button>
-          </div>
-        </form>`);
-    });
+  openAvanceModal(null, id);
 }
+
 function updateAvance(f, id) {
   const fd = new FormData(f);
   fd.set('action','update'); fd.set('id', id);
@@ -220,23 +250,53 @@ function uploadPhotos(eventId) {
     <form id="frmFoto" onsubmit="return savePhotos(this)">
       <input type="hidden" name="event_id" value="${eventId}">
       <label>Fotos</label>
-      <input type="file" name="fotos[]" accept="image/*" multiple required style="margin-bottom:.5rem">
-      <label>Descripción (opcional)</label>
-      <input type="text" name="caption" placeholder="Ej: Vista frontal fundaciones" style="margin-bottom:.5rem">
-      <p style="font-size:.75rem;color:#94a3b8">JPG/PNG/WebP, máximo 5MB por foto. Puedes subir varias a la vez.</p>
+      <input type="file" name="fotos[]" accept="image/*" multiple required id="fotoInput" style="margin-bottom:.5rem">
+      <div id="fotoPreview" style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.5rem"></div>
+      <label>Descripción (opcional)</label><input type="text" name="caption" placeholder="Ej: Vista frontal fundaciones" style="margin-bottom:.5rem">
+      <p id="fotoMeta" style="font-size:.75rem;color:#94a3b8">JPG/PNG/WebP, máximo 5MB por foto. Puedes subir varias a la vez.</p>
       <div class="modal-actions">
         <button type="button" class="btn-outline" onclick="closeModal()">Cancelar</button>
         <button type="submit" class="btn-primary">Subir fotos</button>
       </div>
     </form>`);
+  document.getElementById('fotoInput')?.addEventListener('change', function(){
+    const box = document.getElementById('fotoPreview');
+    const meta = document.getElementById('fotoMeta');
+    if (!box) return;
+    box.innerHTML = '';
+    let total = 0;
+    Array.from(this.files||[]).forEach(f=>{
+      total += f.size;
+      const reader = new FileReader();
+      reader.onload = e => {
+        const item = document.createElement('div');
+        item.style.cssText = 'width:72px;height:54px;border-radius:6px;overflow:hidden;border:1px solid #e2e8f0;background:#f8fafc';
+        item.innerHTML = '<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover;display:block">';
+        box.appendChild(item);
+      };
+      reader.readAsDataURL(f);
+    });
+    if (meta) meta.textContent = (this.files?.length||0) + ' archivo(s), ' + (total/1024/1024).toFixed(1) + ' MB';
+  });
 }
 
 function savePhotos(f) {
   const fd = new FormData(f);
   return fetch('/api/subir_foto.php', { method:'POST', body: fd })
     .then(r=>r.json()).then(d=>{
-      if (d.ok) { showToast(`${d.count || 0} foto(s) subida(s) ✅`); closeModal(); loadTimeline(); }
-      else showToast(d.error || 'Error', 'error');
+      const msgs = [];
+      if (d.ok) {
+        const uploaded = d.count || 0;
+        msgs.push(`${uploaded} foto(s) subida(s) ✅`);
+        if (d.rejected && d.rejected.length) {
+          msgs.push(d.rejected.map(r => r.reason || 'Archivo rechazado').join(', '));
+        }
+        showToast(msgs.join(' | '));
+        closeModal();
+        cargarAvance();
+      } else {
+        showToast(d.error || 'Error', 'error');
+      }
     });
   return false;
 }

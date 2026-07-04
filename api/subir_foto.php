@@ -28,16 +28,29 @@ if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
 $caption = trim($_POST['caption'] ?? '');
 $files = $_FILES['fotos'] ?? null;
 $uploaded = [];
+$rejected = [];
 
 if ($files && is_array($files['name'])) {
     for ($i = 0; $i < count($files['name']); $i++) {
-        if ($files['error'][$i] !== UPLOAD_ERR_OK) continue;
-        $origName = $files['name'][$i];
-        $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
-        if (!in_array($ext, ['jpg','jpeg','png','webp'])) continue;
-        $size = $files['size'][$i];
-        if ($size > 5 * 1024 * 1024) continue; // 5MB max
-
+        $rejectReason = null;
+        if ($files['error'][$i] !== UPLOAD_ERR_OK) {
+            $rejectReason = 'Error de carga';
+        } else {
+            $origName = $files['name'][$i];
+            $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+            if (!in_array($ext, ['jpg','jpeg','png','webp'])) {
+                $rejectReason = 'Formato no soportado';
+            } else {
+                $size = $files['size'][$i];
+                if ($size > 5 * 1024 * 1024) {
+                    $rejectReason = 'Supera 5MB';
+                }
+            }
+        }
+        if ($rejectReason) {
+            $rejected[] = ['name' => $files['name'][$i], 'reason' => $rejectReason];
+            continue;
+        }
         $safeName = time() . '_' . $i . '_' . preg_replace('/[^a-zA-Z0-9_-]/', '', pathinfo($origName, PATHINFO_FILENAME)) . '.' . $ext;
         $dest = $uploadDir . $safeName;
         if (move_uploaded_file($files['tmp_name'][$i], $dest)) {
@@ -49,5 +62,5 @@ if ($files && is_array($files['name'])) {
     }
 }
 
-echo json_encode(['ok' => true, 'count' => count($uploaded), 'fotos' => $uploaded]);
+echo json_encode(['ok' => true, 'count' => count($uploaded), 'fotos' => $uploaded, 'rejected' => $rejected ?? []]);
 exit;
