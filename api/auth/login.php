@@ -96,7 +96,7 @@ if (isset($_SESSION['user_id'])) {
       const errEl = document.getElementById('loginError');
       errEl.style.display = 'none';
       try {
-        const res = await fetch('/auth/login.php', {
+        const res = await fetch('/api/auth/login.php', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -106,7 +106,7 @@ if (isset($_SESSION['user_id'])) {
         });
         const d = await res.json();
         if (!d.ok) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
-        window.location.href = '/app.php';
+        window.location.href = '/api/avance.php';
       } catch (err) { errEl.textContent = 'Error de conexión'; errEl.style.display = 'block'; }
     });
   </script>
