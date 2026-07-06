@@ -1,20 +1,35 @@
 <?php
-// Portal entry point - delegate to public router
+// Portal entry point
 $uri = $_SERVER['REQUEST_URI'];
 $path = parse_url($uri, PHP_URL_PATH);
 $public_dir = __DIR__ . '/public';
-$file = $public_dir . $path;
+$static_file = $public_dir . $path;
 
-// If static file exists in public, serve it directly
-if ($path != '/' && file_exists($file) && !is_dir($file)) {
-    return false;
-}
-
-// Route root to the public router
-if ($path === '/' || $path === '') {
-    require $public_dir . '/.htrouter.php';
+// If a static file exists in public/, serve it directly
+if ($path !== '/' && file_exists($static_file) && !is_dir($static_file)) {
+    $ext = pathinfo($path, PATHINFO_EXTENSION);
+    if ($ext === 'php') {
+        require $static_file;
+        return true;
+    }
+    $mime = [
+        'css' => 'text/css',
+        'js' => 'application/javascript',
+        'png' => 'image/png',
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'gif' => 'image/gif',
+        'svg' => 'image/svg+xml',
+        'ico' => 'image/x-icon',
+        'webp' => 'image/webp',
+        'pdf' => 'application/pdf',
+    ];
+    if (isset($mime[$ext])) {
+        header('Content-Type: ' . $mime[$ext]);
+    }
+    readfile($static_file);
     return true;
 }
 
-// API/auth routes: run .htrouter which has full route table
+// For all other paths, run the router
 require $public_dir . '/.htrouter.php';
