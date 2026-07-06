@@ -302,12 +302,55 @@ async function eliminarPago(id) {
 
 // Hash-based routing
 const defaultTab = IS_CLIENT ? 'proyectos' : 'resumen';
-const tabFromHash = location.hash.replace('#', '');
-if (tabFromHash && ['resumen','proyectos','avance','clientes','pagos','documentos','password','admin'].includes(tabFromHash)) {
-  loadTab(tabFromHash);
-} else {
-  loadTab(defaultTab);
+let projectIdFromHash = null;
+
+function parseHash() {
+  const raw = location.hash.replace('#', '');
+  if (!raw) return null;
+  const [tab, query] = raw.split('?');
+  const id = query ? new URLSearchParams(query).get('id') : null;
+  if (!['resumen','proyectos','avance','clientes','pagos','documentos','password','admin'].includes(tab)) return null;
+  return { tab, id: id ? parseInt(id, 10) : null };
 }
+
+async function navigateFromHash() {
+  const parsed = parseHash();
+  if (!parsed) { loadTab(defaultTab); return; }
+  projectIdFromHash = parsed.id;
+  await loadTab(parsed.tab);
+  if (projectIdFromHash && parsed.tab === 'proyectos') {
+    await expandProjectAfterLoad(projectIdFromHash);
+  }
+  projectIdFromHash = null;
+}
+
+async function expandProjectAfterLoad(id) {
+  let tries = 0;
+  while (tries < 30) {
+    const el = document.getElementById('proj-' + id);
+    const btn = el ? document.querySelector(`button[aria-controls="proj-${id}"]`) : null;
+    if (el && btn && el.style.display === 'block') { return; }
+    if (el && btn && el.style.display === 'none') {
+      btn.click();
+      return;
+    }
+    await new Promise(r => setTimeout(r, 50));
+    tries++;
+  }
+}
+
+document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
+  item.addEventListener('click', (e) => {
+    e.preventDefault();
+    projectIdFromHash = null;
+    loadTab(item.dataset.tab);
+    history.replaceState(null, '', '#' + item.dataset.tab);
+  });
+});
+
+window.addEventListener('hashchange', navigateFromHash);
+if (location.hash) { navigateFromHash(); }
+else { loadTab(defaultTab); }
 </script>
 </body>
 </html>

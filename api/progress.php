@@ -114,7 +114,7 @@ if ($action) {
         }
         // Sanitize strings before json_encode
         array_walk_recursive($events, function(&$v) {
-            if (is_string($v)) $v = mb_convert_encoding($v, 'UTF-8', 'UTF-8');
+            if (is_string($v)) $v = preg_replace('//u', '', $v);
         });
         echo json_encode(['ok' => true, 'data' => $events]);
         exit;
