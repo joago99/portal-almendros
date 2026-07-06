@@ -106,7 +106,7 @@ if (isset($_SESSION['user_id'])) {
         });
         const d = await res.json();
         if (!d.ok) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
-        window.location.href = '/api/avance.php';
+        window.location.href = '/portal';
       } catch (err) { errEl.textContent = 'Error de conexión'; errEl.style.display = 'block'; }
     });
   </script>

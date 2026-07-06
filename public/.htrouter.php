@@ -12,6 +12,8 @@ if ($path !== '/' && file_exists($staticFile) && !is_dir($staticFile)) {
 // Rutas API y vistas
 $routes = [
     '/auth/login.php' => $root . '/api/auth/login.php',
+    '/api/auth/login.php' => $root . '/api/auth/login.php',
+    '/portal' => __DIR__ . '/app.php',
     '/auth/logout.php' => $root . '/api/auth/logout.php',
     '/auth/session.php' => $root . '/api/auth/session.php',
     '/auth/change-password.php' => $root . '/api/auth/change-password.php',
