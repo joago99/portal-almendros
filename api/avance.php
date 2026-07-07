@@ -74,7 +74,7 @@ if (!$isStaff && $userRole === 'client') {
     </div>
     <button class="btn-outline" id="btnCargarAvance" onclick="cargarAvance()" style="display:none">⟳ Recargar</button>
     <?php if ($isStaff): ?>
-      <button class="btn-primary" id="btnNuevoAvance" onclick="openAvanceModal(<?= $projects[0]['id'] ?? 'null' ?>)" style="display:none">+ Registrar avance</button>
+      <button class="btn-primary" id="btnNuevoAvance" onclick="openAvanceModal(null, null)">+ Registrar avance</button>
     <?php endif; ?>
   </div>
 
