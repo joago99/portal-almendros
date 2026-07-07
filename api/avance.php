@@ -118,33 +118,75 @@ function cargarAvance() {
   fetch('/api/progress.php?action=list&project_id=' + pid)
     .then(r => r.json()).then(d => {
       if (!d.ok) throw new Error(d.error || 'Error');
-      if (window.__evPhotos !== d.data?.__photos) {
-        window.__evPhotos = d.data?.__photos || {};
-      }
-      renderTL(d.data || [], btn);
+      window.__msData = d.milestones || [];
+      renderTL(d.data || [], d.milestones || [], d.overall_pct || 0);
       if (typeof updateTitleCount === 'function') updateTitleCount(d.data.length);
     }).catch(() => {
       box.innerHTML = '<div class="empty-state"><p style="color:#b91c1c;font-weight:600">No se pudo cargar la timeline</p></div>';
     });
 }
 
-function renderTL(items, btn) {
+const MS_COLORS = {
+  cimentacion: '#0d9488', albanileria: '#0891b2', techumbre: '#7c3aed',
+  terminaciones: '#d97706', recepcion: '#059669'
+};
+const MS_LABELS = {
+  cimentacion: 'Cimentación', albanileria: 'Albañilería / OG', techumbre: 'Techumbre',
+  terminaciones: 'Terminaciones', recepcion: 'Recepción Municipal'
+};
+const MS_ICONS = {
+  cimentacion: '🏗', albanileria: '🧱', techumbre: '🏠', terminaciones: '🔧', recepcion: '📋'
+};
+const MS_TYPES = ['cimentacion','albanileria','techumbre','terminaciones','recepcion'];
+
+function renderTL(items, milestones, overallPct) {
   const box = document.getElementById('tlContainer');
+  const msMilestones = milestones;
+  let h = '';
+
+  // ─── Milestone progress bar header ───
+  h += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1rem">';
+  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">';
+  h += '<div><span style="font-weight:700;color:#0f172a;font-size:.95rem">Avance de obra</span></div>';
+  h += '<div><span style="font-weight:800;color:#059669;font-size:1.3rem">' + overallPct + '%</span></div>';
+  h += '</div>';
+  // Barra de progreso general
+  h += '<div style="height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden;margin-bottom:1rem">';
+  h += '<div style="height:100%;width:' + overallPct + '%;background:linear-gradient(90deg,#0d9488,#059669);border-radius:4px;transition:width .4s"></div>';
+  h += '</div>';
+  // Tabla de hitos por etapa
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:.4rem">';
+  for (const m of msMilestones) {
+    const done = m.completed ? 1 : 0;
+    const color = MS_COLORS[m.milestone_type] || '#94a3b8';
+    const icon = MS_ICONS[m.milestone_type] || '';
+    h += '<div style="text-align:center;padding:.5rem .2rem;border-radius:8px;background:' + (done ? '#f0fdf4' : '#f8fafc') + ';border:1px solid ' + (done ? '#bbf7d0' : '#e2e8f0') + '">';
+    h += '<div style="font-size:1.3rem;margin-bottom:.2rem">' + icon + '</div>';
+    h += '<div style="font-size:.65rem;font-weight:' + (done ? '700' : '500') + ';color:' + (done ? '#166534' : '#64748b') + '">' + m.label.split(' ')[0] + '</div>';
+    if (done) h += '<div style="font-size:.6rem;color:#059669;margin-top:.1rem">✓</div>';
+    else h += '<div style="font-size:.6rem;color:#94a3b8;margin-top:.1rem">' + m.weight_pct + '%</div>';
+    h += '</div>';
+  }
+  h += '</div></div>';
+
+  // ─── Timeline ───
   if (!items.length) {
-    box.innerHTML = '<div class="empty-state"><div class="empty-state-title">Sin avances registrados</div><p>Todavía no hay registros para esta obra.</p></div>';
+    h += '<div class="empty-state"><div class="empty-state-title">Sin avances registrados</div><p>Todavía no hay registros para esta obra.</p></div>';
+    box.innerHTML = h;
     return;
   }
-  let h = '<div class="timeline">';
+  h += '<div class="timeline">';
   for (const e of items) {
-    const bc = e.event_type === 'milestone' ? 'badge-milestone' : 'badge-daily';
-    const bl = e.event_type === 'milestone' ? 'Hito' : 'Avance diario';
-    const photos = (window.__evPhotos && window.__evPhotos[e.id]) ? window.__evPhotos[e.id] : [];
+    const isMs = MS_TYPES.includes(e.event_type);
+    const bc = isMs ? 'badge-milestone' : 'badge-daily';
+    const bl = isMs ? (MS_LABELS[e.event_type] || 'Hito') : 'Avance diario';
+    const photos = (e.fotos || []);
     const pHtml = photos.map(f =>
       `<div class="tl-photo" onclick="showPhoto('${(f.url||'').replace(/'/g,"&apos;")}','${(f.caption||'').replace(/'/g,"&apos;")}')">
         <img src="${f.url}" alt="${esc(f.caption||'Foto de avance')}" loading="lazy">
       </div>`
     ).join('');
-    h += `<div class="tl-item">
+    h += `<div class="tl-item" style="${isMs?'border-left:3px solid '+MS_COLORS[e.event_type]:''}">
       <div class="tl-header">
         <div><div class="tl-title">${esc(e.title)}</div></div>
         <div style="font-size:.78rem;color:#64748b;white-space:nowrap">${e.event_date}</div>
@@ -152,9 +194,13 @@ function renderTL(items, btn) {
       <div class="tl-body">${esc(e.description||' ')}</div>
       <div class="tl-meta">
         <span class="tl-badge ${bc}">${bl}</span>
-        ${e.percentage ? `<span class="tl-pct">${e.percentage}%</span>` : ''}
+        ${e.percentage > 0 ? `<span class="tl-pct">${e.percentage}%</span>` : ''}
         <span class="tl-author">por ${esc(e.autor)}</span>
       </div>
+      ${e.team_present ? `<div style="font-size:.8rem;color:#475569;margin-top:.3rem">👷 ${esc(e.team_present)}</div>` : ''}
+      ${e.weather_conditions ? `<div style="font-size:.8rem;color:#475569">🌤 ${e.weather_conditions}</div>` : ''}
+      ${e.materials_used ? `<div style="font-size:.8rem;color:#475569">📦 ${esc(e.materials_used)}</div>` : ''}
+      ${e.incidents ? `<div style="font-size:.8rem;color:#b91c1c;background:#fef2f2;padding:.3rem .6rem;border-radius:6px;margin-top:.3rem">⚠ ${esc(e.incidents)}</div>` : ''}
       ${pHtml ? '<div class="tl-photos">' + pHtml + '</div>' : ''}
       ${IS_STAFF ? `<div class="tl-actions">
         <button class="btn-outline" onclick="openAvanceModal(null, ${e.id})">Editar</button>

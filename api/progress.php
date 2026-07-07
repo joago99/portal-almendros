@@ -36,13 +36,55 @@ if ($action) {
         $date   = $_POST['event_date'] ?? date('Y-m-d');
         $pct    = (int)($_POST['percentage'] ?? 0);
         $type   = $_POST['event_type'] ?? 'daily_log';
+        $team   = trim($_POST['team_present'] ?? '');
+        $weather = trim($_POST['weather_conditions'] ?? '');
+        $materials = trim($_POST['materials_used'] ?? '');
+        $incidents = trim($_POST['incidents'] ?? '');
+
         if ($projId <= 0 || !$title) {
             echo json_encode(['ok' => false, 'error' => 'Proyecto y título son requeridos']);
             exit;
         }
-        $db->prepare('INSERT INTO progress_events (project_id, title, description, event_date, percentage, event_type, created_by) VALUES (?,?,?,?,?,?,?)')
-            ->execute([$projId, $title, $desc ?: null, $date, $pct, $type, $userId]);
-        echo json_encode(['ok' => true, 'id' => $db->lastInsertId()]);
+
+        // Validar secuencia de hitos
+        $milestoneTypes = ['cimentacion','albanileria','techumbre','terminaciones','recepcion'];
+        if (in_array($type, $milestoneTypes)) {
+            $ms = $db->prepare("SELECT seq, completed FROM project_milestones WHERE project_id = ? AND milestone_type = ?");
+            $ms->execute([$projId, $type]);
+            $current = $ms->fetch();
+            if (!$current) {
+                echo json_encode(['ok'=>false,'error'=>'Hito no válido para este proyecto']); exit;
+            }
+            if ($current['completed']) {
+                echo json_encode(['ok'=>false,'error'=>'Este hito ya fue completado']); exit;
+            }
+            // Validar que el hito anterior esté completado
+            if ($current['seq'] > 1) {
+                $prevTypes = ['','cimentacion','albanileria','techumbre','terminaciones','recepcion'];
+                $prevType = $prevTypes[$current['seq'] - 1] ?? null;
+                if ($prevType) {
+                    $prev = $db->prepare("SELECT completed FROM project_milestones WHERE project_id = ? AND milestone_type = ?");
+                    $prev->execute([$projId, $prevType]);
+                    $p = $prev->fetch();
+                    if (!$p || !$p['completed']) {
+                        echo json_encode(['ok'=>false,'error'=>'El hito anterior (' . $prevType . ') debe completarse primero']); exit;
+                    }
+                }
+            }
+            // Marcar hito como completado
+            $db->prepare("UPDATE project_milestones SET completed = 1, completed_at = datetime('now') WHERE project_id = ? AND milestone_type = ?")
+                ->execute([$projId, $type]);
+        }
+
+        // Insertar evento
+        $stmt = $db->prepare('INSERT INTO progress_events (project_id, title, description, event_date, percentage, event_type, team_present, weather_conditions, materials_used, incidents, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+        $stmt->execute([$projId, $title, $desc ?: null, $date, $pct, $type, $team ?: null, $weather ?: null, $materials ?: null, $incidents ?: null, $userId]);
+        $eventId = $db->lastInsertId();
+
+        // Calcular % general del proyecto
+        $totalPct = $db->query("SELECT COALESCE(SUM(weight_pct),0) FROM project_milestones WHERE project_id = $projId AND completed = 1")->fetchColumn();
+
+        echo json_encode(['ok' => true, 'id' => $eventId, 'overall_pct' => (int)$totalPct]);
         exit;
     }
 
@@ -50,7 +92,7 @@ if ($action) {
         $id = (int)($_POST['id'] ?? 0);
         $fields = [];
         $params = [];
-        foreach (['title','description','event_date','event_type'] as $k) {
+        foreach (['title','description','event_date','event_type','team_present','weather_conditions','materials_used','incidents'] as $k) {
             if (isset($_POST[$k])) { $fields[] = "$k = ?"; $params[] = $_POST[$k]; }
         }
         if (isset($_POST['percentage'])) {
@@ -116,7 +158,20 @@ if ($action) {
         array_walk_recursive($events, function(&$v) {
             if (is_string($v)) $v = preg_replace('//u', '', $v);
         });
-        echo json_encode(['ok' => true, 'data' => $events]);
+
+        // Milestone summary + overall percentage
+        $msLabels = ['cimentacion'=>'Cimentación','albanileria'=>'Albañilería / OG','techumbre'=>'Techumbre','terminaciones'=>'Terminaciones','recepcion'=>'Recepción Municipal'];
+        $milestones = $db->prepare("SELECT milestone_type, label, seq, weight_pct, completed, completed_at FROM project_milestones WHERE project_id = ? ORDER BY seq");
+        $milestones->execute([$projId]);
+        $msData = $milestones->fetchAll();
+        $overallPct = $db->query("SELECT COALESCE(SUM(weight_pct),0) FROM project_milestones WHERE project_id = $projId AND completed = 1")->fetchColumn();
+
+        echo json_encode([
+            'ok' => true,
+            'data' => $events,
+            'milestones' => $msData,
+            'overall_pct' => (int)$overallPct,
+        ]);
         exit;
     }
 }

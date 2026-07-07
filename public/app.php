@@ -306,13 +306,13 @@ function openAvanceModal(projectId, eventId) {
   if (!pid) { alert('Selecciona una obra primero'); return; }
   const isEdit = !!eventId;
   const title = isEdit ? 'Editar avance' : 'Registrar avance';
-  let data = {project_id: pid, title:'', description:'', event_date: new Date().toISOString().slice(0,10), percentage:0, event_type:'daily_log'};
+  let data = {project_id: pid, title:'', description:'', event_date: new Date().toISOString().slice(0,10), percentage:0, event_type:'daily_log', team_present:'', weather_conditions:'', materials_used:'', incidents:''};
   if (isEdit) {
     fetch('/api/progress.php?action=list&project_id=' + pid)
       .then(r=>r.json()).then(d => {
         const ev = (d.data||[]).find(x => x.id == eventId);
         if (!ev) return showToast('Error','error');
-        data = {title: ev.title||'', description: ev.description||'', event_date: ev.event_date||data.event_date, percentage: ev.percentage||0, event_type: ev.event_type||'daily_log'};
+        data = {title: ev.title||'', description: ev.description||'', event_date: ev.event_date||data.event_date, percentage: ev.percentage||0, event_type: ev.event_type||'daily_log', team_present: ev.team_present||'', weather_conditions: ev.weather_conditions||'', materials_used: ev.materials_used||'', incidents: ev.incidents||''};
         renderAvanceForm(pid, eventId, title, data);
       });
   } else {
@@ -322,25 +322,65 @@ function openAvanceModal(projectId, eventId) {
 
 function renderAvanceForm(pid, eventId, title, values) {
   const submitLabel = eventId ? 'Guardar cambios' : 'Guardar avance';
-  const action = eventId ? 'update' : 'create';
-  openModal(`<h3>${title}</h3>
-    <form id="frmAvanceUnificado" onsubmit="return saveAvanceForm(this, ${pid}, ${eventId||'null'})">
-      <input type="hidden" name="project_id" value="${pid}">
-      ${eventId ? `<input type="hidden" name="id" value="${eventId}">` : ''}
-      <label>Título</label><input name="title" value="${values.title.replace(/\"/g,'&quot;')}" placeholder="Ej: Fundaciones listas" required>
-      <label>Descripción</label><textarea name="description" rows="3" placeholder="Qué se hizo hoy, materiales usados, personal presente...">${values.description||''}</textarea>
-      <label>Fecha</label><input type="date" name="event_date" value="${values.event_date}" required>
-      <label>% de avance estimado (0-100)</label><input type="number" name="percentage" min="0" max="100" value="${values.percentage}">
-      <label>Tipo</label><select name="event_type">
-        <option value="daily_log" ${values.event_type==='daily_log'?'selected':''}>Avance diario</option>
-        <option value="milestone" ${values.event_type==='milestone'?'selected':''}>Hito / Inspección</option>
-      </select>
-      <div class="modal-actions">
-        <button type="button" class="btn-outline" onclick="closeModal()">Cancelar</button>
-        <button type="submit" class="btn-primary">${submitLabel}</button>
-      </div>
-    </form>
-    <p style="font-size:.75rem;color:#94a3b8;margin-top:.75rem">Después de guardar podrás subir fotos del avance.</p>`);
+  // Cargar hitos del proyecto para el selector
+  fetch('/api/progress.php?action=list&project_id=' + pid)
+    .then(r => r.json()).then(projData => {
+      const milestones = projData.milestones || [];
+      const overallPct = projData.overall_pct || 0;
+      const msLabels = {'cimentacion':'Cimentación','albanileria':'Albañilería / OG','techumbre':'Techumbre','terminaciones':'Terminaciones','recepcion':'Recepción Municipal'};
+      let msOptions = '';
+      for (const m of milestones) {
+        const disabled = m.completed ? ' disabled' : '';
+        const suffix = m.completed ? ' ✓' : '';
+        msOptions += `<option value="${m.milestone_type}"${disabled}${values.event_type===m.milestone_type?' selected':''}>${m.label} (${m.weight_pct}%)${suffix}</option>`;
+      }
+      openModal(`<h3>${title} ${eventId ? '' : `— ${overallPct}% completado`}</h3>
+        <form id="frmAvanceUnificado" onsubmit="return saveAvanceForm(this, ${pid}, ${eventId||'null'})">
+          <input type="hidden" name="project_id" value="${pid}">
+          ${eventId ? `<input type="hidden" name="id" value="${eventId}">` : ''}
+          <label>Título</label><input name="title" value="${values.title.replace(/\"/g,'&quot;')}" placeholder="Ej: Fundaciones listas" required>
+          <label>Descripción</label><textarea name="description" rows="2" placeholder="Qué se hizo hoy...">${values.description||''}</textarea>
+          <label>Fecha</label><input type="date" name="event_date" value="${values.event_date}" required>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+            <div>
+              <label>Tipo</label>
+              <select name="event_type" id="msType">
+                <option value="daily_log" ${values.event_type==='daily_log'?'selected':''}>Avance diario</option>
+                ${msOptions}
+              </select>
+            </div>
+            <div>
+              <label>% de avance (0-100)</label>
+              <input type="number" name="percentage" min="0" max="100" value="${values.percentage}">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+            <div>
+              <label>Personal presente</label>
+              <input name="team_present" value="${values.team_present.replace(/\"/g,'&quot;')}" placeholder="Ej: 3 albañiles, 1 ayudante">
+            </div>
+            <div>
+              <label>Clima</label>
+              <select name="weather_conditions">
+                <option value="" ${!values.weather_conditions?'selected':''}>—</option>
+                <option value="soleado" ${values.weather_conditions==='soleado'?'selected':''}>☀ Soleado</option>
+                <option value="nublado" ${values.weather_conditions==='nublado'?'selected':''}>⛅ Nublado</option>
+                <option value="lluvia" ${values.weather_conditions==='lluvia'?'selected':''}>🌧 Lluvia</option>
+                <option value="otro" ${values.weather_conditions==='otro'?'selected':''}>🌤 Otro</option>
+              </select>
+            </div>
+          </div>
+          <label>Materiales usados</label>
+          <input name="materials_used" value="${values.materials_used.replace(/\"/g,'&quot;')}" placeholder="Ej: 200 ladrillos, 5 sacos cemento">
+          <label>Incidencias / Imprevistos</label>
+          <textarea name="incidents" rows="2" placeholder="Ej: Lluvia detuvo obra 2h">${values.incidents||''}</textarea>
+          <div class="modal-actions">
+            <button type="button" class="btn-outline" onclick="closeModal()">Cancelar</button>
+            <button type="submit" class="btn-primary">${submitLabel}</button>
+          </div>
+        </form>
+        <p style="font-size:.75rem;color:#94a3b8;margin-top:.75rem">Después de guardar podrás subir fotos del avance.</p>`);
+    });
 }
 
 function saveAvanceForm(f, pid, eventId) {
