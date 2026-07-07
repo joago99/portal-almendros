@@ -11,13 +11,7 @@ if ($path !== '/' && file_exists($staticFile) && !is_dir($staticFile)) {
 
 // Rutas API y vistas
 $routes = [
-    '/auth/login.php' => $root . '/api/auth/login.php',
-    '/api/auth/login.php' => $root . '/api/auth/login.php',
     '/portal' => __DIR__ . '/app.php',
-    '/auth/logout.php' => $root . '/api/auth/logout.php',
-    '/auth/session.php' => $root . '/api/auth/session.php',
-    '/auth/change-password.php' => $root . '/api/auth/change-password.php',
-    '/logout.php' => $root . '/api/auth/logout.php',
 
     // Tabs principales
     '/api/resumen.php' => $root . '/api/resumen.php',
@@ -45,15 +39,24 @@ $public_pages = [
     '/' => __DIR__ . '/../api/auth/login.php',
     '/app.php' => __DIR__ . '/app.php',
     '/login.php' => __DIR__ . '/login.php',
+    '/auth/login.php' => __DIR__ . '/../api/auth/login.php',
+    '/api/auth/login.php' => __DIR__ . '/../api/auth/login.php',
+    '/auth/logout.php' => __DIR__ . '/../api/auth/logout.php',
+    '/auth/session.php' => __DIR__ . '/../api/auth/session.php',
+    '/auth/change-password.php' => __DIR__ . '/../api/auth/change-password.php',
+    '/logout.php' => __DIR__ . '/../api/auth/logout.php',
+    '/test-router' => __DIR__ . '/../api/auth/login-test-min.php',
+    '/test-session' => __DIR__ . '/../api/auth/login-test-session.php',
+    '/test-full' => __DIR__ . '/../api/auth/login-test-full.php',
 ];
-
-if (isset($routes[$path])) {
-    require $routes[$path];
-    return true;
-}
 
 if (isset($public_pages[$path])) {
     require $public_pages[$path];
+    return true;
+}
+
+if (isset($routes[$path])) {
+    require $routes[$path];
     return true;
 }
 

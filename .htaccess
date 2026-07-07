@@ -1,27 +1,6 @@
-<IfModule mod_rewrite.c>
-  RewriteEngine On
-  RewriteRule ^setup\.php$ - [F,L]
-  RewriteRule ^uploads/ - [F,L]
-</IfModule>
-
-<Files "setup.php">
-  Require all denied
-</Files>
-
-<Directory "uploads">
-  php_flag engine off
-  <IfModule mod_authz_core.c>
-    Require all denied
-  </IfModule>
-  <IfModule !mod_authz_core.c>
-    Order Allow,Deny
-    Deny from all
-  </IfModule>
-</Directory>
-
-<IfModule mod_headers.c>
-  Header set X-Content-Type-Options "nosniff"
-  Header set X-Frame-Options "SAMEORIGIN"
-  Header set X-XSS-Protection "1; mode=block"
-  Header set Referrer-Policy "strict-origin-when-cross-origin"
-</IfModule>
+RewriteEngine On
+# Don't rewrite existing files or directories
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+# Everything else goes to index.php → public/.htrouter.php
+RewriteRule ^(.*)$ index.php [QSA,L]
