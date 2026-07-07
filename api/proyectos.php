@@ -71,7 +71,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'change_status' && ($_P
 $clientFilter = $clientFilter ?: ($_GET['client_id'] ?? null);
 $search = $_GET['q'] ?? '';
 $statusFilter = $_GET['estado'] ?? '';
-$clientFilter = $clientFilter ?: ($_GET['client_id'] ?? null);
 
 $where = [];
 $params = [];
