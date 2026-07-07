@@ -194,8 +194,7 @@ const CLIENT_FILTER = <?= json_encode($clientFilter ?: '') ?>;
       <?php if ($isStaff): ?>
       <button class="btn btn-primary btn-sm" onclick="editarProyecto(<?= $proj['id'] ?>)">Editar</button>
       <button class="btn btn-outline btn-sm" onclick="cambiarEstadoProyecto(<?= $proj['id'] ?>)">Cambiar estado</button>
-      <button class="btn btn-outline btn-sm" onclick="quickAvance(<?= $proj['id'] ?>, '<?= htmlspecialchars($proj['name'], ENT_QUOTES) ?>')">⚡ Avance rápido</button>
-      <button class="btn btn-outline btn-sm" onclick="openAvanceTab(<?= $proj['id'] ?>)">📋 Ver avance</button>
+      <button class="btn btn-outline btn-sm" onclick="openAvanceModal(<?= $proj['id'] ?>, null)">⚡ Registrar avance rápido</button>
       <button class="btn btn-danger btn-sm" onclick="eliminarProyecto(<?= $proj['id'] ?>)">Eliminar</button>
       <?php endif; ?>
     </div>

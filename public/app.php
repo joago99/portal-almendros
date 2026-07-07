@@ -300,6 +300,82 @@ async function eliminarPago(id) {
   showToast('Pago eliminado'); loadTab('pagos');
 }
 
+/* ─── Avance modal unificado (usado desde avance.php y proyectos.php) ─── */
+function openAvanceModal(projectId, eventId) {
+  const pid = eventId ? document.getElementById('avProyecto')?.value : projectId;
+  if (!pid) { alert('Selecciona una obra primero'); return; }
+  const isEdit = !!eventId;
+  const title = isEdit ? 'Editar avance' : 'Registrar avance';
+  let data = {project_id: pid, title:'', description:'', event_date: new Date().toISOString().slice(0,10), percentage:0, event_type:'daily_log'};
+  if (isEdit) {
+    fetch('/api/progress.php?action=list&project_id=' + pid)
+      .then(r=>r.json()).then(d => {
+        const ev = (d.data||[]).find(x => x.id == eventId);
+        if (!ev) return showToast('Error','error');
+        data = {title: ev.title||'', description: ev.description||'', event_date: ev.event_date||data.event_date, percentage: ev.percentage||0, event_type: ev.event_type||'daily_log'};
+        renderAvanceForm(pid, eventId, title, data);
+      });
+  } else {
+    renderAvanceForm(pid, null, title, data);
+  }
+}
+
+function renderAvanceForm(pid, eventId, title, values) {
+  const submitLabel = eventId ? 'Guardar cambios' : 'Guardar avance';
+  const action = eventId ? 'update' : 'create';
+  openModal(`<h3>${title}</h3>
+    <form id="frmAvanceUnificado" onsubmit="return saveAvanceForm(this, ${pid}, ${eventId||'null'})">
+      <input type="hidden" name="project_id" value="${pid}">
+      ${eventId ? `<input type="hidden" name="id" value="${eventId}">` : ''}
+      <label>Título</label><input name="title" value="${values.title.replace(/\"/g,'&quot;')}" placeholder="Ej: Fundaciones listas" required>
+      <label>Descripción</label><textarea name="description" rows="3" placeholder="Qué se hizo hoy, materiales usados, personal presente...">${values.description||''}</textarea>
+      <label>Fecha</label><input type="date" name="event_date" value="${values.event_date}" required>
+      <label>% de avance estimado (0-100)</label><input type="number" name="percentage" min="0" max="100" value="${values.percentage}">
+      <label>Tipo</label><select name="event_type">
+        <option value="daily_log" ${values.event_type==='daily_log'?'selected':''}>Avance diario</option>
+        <option value="milestone" ${values.event_type==='milestone'?'selected':''}>Hito / Inspección</option>
+      </select>
+      <div class="modal-actions">
+        <button type="button" class="btn-outline" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn-primary">${submitLabel}</button>
+      </div>
+    </form>
+    <p style="font-size:.75rem;color:#94a3b8;margin-top:.75rem">Después de guardar podrás subir fotos del avance.</p>`);
+}
+
+function saveAvanceForm(f, pid, eventId) {
+  const fd = new FormData(f);
+  fd.set('action', eventId ? 'update' : 'create');
+  if (eventId) fd.set('id', eventId);
+  return fetch('/api/progress.php', {
+    method:'POST', body: new URLSearchParams(fd).toString(),
+    headers:{'Content-Type':'application/x-www-form-urlencoded'}
+  }).then(r => r.json()).then(d => {
+    if (d.ok) {
+      showToast(eventId ? 'Avance actualizado ✅' : 'Avance registrado ✅');
+      closeModal();
+      if (typeof cargarAvance === 'function') {
+        const sel = document.getElementById('avProyecto');
+        const prevPid = sel ? sel.value : null;
+        cargarAvance();
+        if (prevPid && sel) sel.value = prevPid;
+        const box = document.getElementById('tlContainer');
+        if (box && box.firstChild) {
+          const banner = document.createElement('div');
+          banner.style.cssText = 'background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;border-radius:8px;padding:.6rem 1rem;margin-bottom:.75rem;font-size:.85rem';
+          banner.textContent = eventId ? 'Avance actualizado — seguir editando o subir fotos.' : 'Avance guardado — agrega fotos o registra otro.';
+          box.insertBefore(banner, box.firstChild);
+          setTimeout(() => banner.remove(), 4000);
+        }
+      } else {
+        loadTab('proyectos');
+      }
+      return false;
+    }
+    showToast(d.error, 'error'); return false;
+  });
+}
+
 // Hash-based routing
 const defaultTab = IS_CLIENT ? 'proyectos' : 'resumen';
 let projectIdFromHash = null;
