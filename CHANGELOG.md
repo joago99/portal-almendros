@@ -1,5 +1,13 @@
 # Changelog — Portal Los Almendros
 
+## v1.0.1 (2026-07-06)
+### 🚀 Pestaña Proyectos
+- Filtros unificados por cliente y estado
+- Tipado de documentos por tipo visible en detalle
+- Acceso directo a Avance desde detalle de proyecto
+- Ordenamiento por riesgo/atraso/presupuesto/nombre
+- Empty state mejorado
+
 ## v1.0.0 (2026-06-30)
 ### 🚀 Lanzamiento inicial
 - Sistema de autenticación con roles (admin, staff, client)

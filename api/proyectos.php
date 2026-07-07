@@ -71,33 +71,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'change_status' && ($_P
 $clientFilter = $clientFilter ?: ($_GET['client_id'] ?? null);
 $search = $_GET['q'] ?? '';
 $statusFilter = $_GET['estado'] ?? '';
+$clientFilter = $clientFilter ?: ($_GET['client_id'] ?? null);
 
-if ($clientFilter) {
-    $stmt = $db->prepare('SELECT p.*, c.name as client_name FROM projects p LEFT JOIN clients c ON c.id = p.client_id WHERE p.client_id = ? ORDER BY p.created_at DESC');
-    $stmt->execute([$clientFilter]);
-} else {
-    $stmt = $db->query('SELECT p.*, c.name as client_name FROM projects p LEFT JOIN clients c ON c.id = p.client_id ORDER BY p.created_at DESC');
-}
+$where = [];
+$params = [];
+if ($clientFilter) { $where[] = 'p.client_id = ?'; $params[] = (int)$clientFilter; }
+if ($statusFilter) { $where[] = 'p.status = ?'; $params[] = $statusFilter; }
+$whereSql = $where ? 'WHERE '.implode(' AND ', $where) : '';
+$stmt = $db->prepare("SELECT p.*, c.name as client_name FROM projects p LEFT JOIN clients c ON c.id = p.client_id $whereSql ORDER BY p.created_at DESC");
+$stmt->execute($params);
 $projects = $stmt->fetchAll();
 $clientes = $db->query('SELECT id, name FROM clients ORDER BY name')->fetchAll();
+$docTypes = ['presupuesto','plano','legal','avance','otro'];
 ?>
 <script>
 const CLIENTES = <?= json_encode($clientes) ?>;
+const CLIENT_FILTER = <?= json_encode($clientFilter ?: '') ?>;
 </script>
 <div class="search-bar">
   <input type="text" id="searchProyectos" placeholder="Buscar proyecto..." value="<?= htmlspecialchars($search) ?>">
+  <select id="filterCliente" onchange="filtrarProyectos()">
+    <option value="">Todos los clientes</option>
+    <?php foreach ($clientes as $c): ?>
+      <option value="<?= $c['id'] ?>" <?= (string)(int)($clientFilter ?? 0) === (string)$c['id'] ? 'selected' : '' ?>><?= htmlspecialchars($c['name']) ?></option>
+    <?php endforeach; ?>
+  </select>
   <select id="filterEstado" onchange="filtrarProyectos()">
     <option value="">Todos los estados</option>
     <option value="activo" <?=$statusFilter==='activo'?'selected':''?>>Activo</option>
     <option value="pausado" <?=$statusFilter==='pausado'?'selected':''?>>Pausado</option>
     <option value="finalizado" <?=$statusFilter==='finalizado'?'selected':''?>>Finalizado</option>
   </select>
+  <button class="btn btn-outline btn-sm" onclick="clearProyectoFilters()">Limpiar</button>
   <?php if ($isStaff): ?>
-  <button class="btn btn-primary" onclick="nuevoProyecto()">+ Nuevo proyecto</button>
+  <button class="btn btn-primary" onclick="nuevoProyecto()" style="margin-left:auto">+ Nuevo proyecto</button>
   <?php endif; ?>
+  <select id="ordenProyectos" onchange="ordenarProyectos()" style="min-width:auto">
+    <option value="">Ordenar...</option>
+    <option value="atraso">Atraso primero</option>
+    <option value="pendiente">Pendiente primero</option>
+    <option value="presupuesto_desc">Presupuesto ↓</option>
+    <option value="presupuesto_asc">Presupuesto ↑</option>
+    <option value="nombre">Nombre A-Z</option>
+  </select>
 </div>
 
 <div id="proyectosList">
+<?php if (!count($projects)): ?>
+  <div class="empty-state"><div class="empty-state-title">Sin proyectos</div><p>Crea el primero o ajusta los filtros.</p></div>
+<?php endif; ?>
 <?php foreach ($projects as $proj):
   if ($statusFilter && $proj['status'] !== $statusFilter) continue;
   $pag = $db->prepare('SELECT COALESCE(SUM(amount_clp),0) FROM payments WHERE project_id = ? AND status = "pagado"');
@@ -108,9 +130,14 @@ const CLIENTES = <?= json_encode($clientes) ?>;
   $atr->execute([$proj['id']]); $atrasado = $atr->fetchColumn();
   $st = $db->prepare('SELECT COUNT(*) FROM documents WHERE project_id = ?');
   $st->execute([$proj['id']]); $docsCount = (int)$st->fetchColumn();
+  $docsByType = [];
+  foreach ($docTypes as $t) {
+    $st2 = $db->prepare('SELECT COUNT(*) FROM documents WHERE project_id = ? AND type = ?');
+    $st2->execute([$proj['id'], $t]); $docsByType[$t] = (int)$st2->fetchColumn();
+  }
   $pct = ($proj['budget_clp'] ?? 0) > 0 ? round(($pagado / $proj['budget_clp']) * 100) : 0;
 ?>
-<div class="card proyecto-card" data-estado="<?= $proj['status'] ?>" data-search="<?= strtolower(htmlspecialchars($proj['name'].' '.$proj['client_name'])) ?>">
+<div class="card proyecto-card" data-estado="<?= $proj['status'] ?>" data-cliente="<?= (int)($proj['client_id'] ?? 0) ?>" data-search="<?= strtolower(htmlspecialchars($proj['name'].' '.($proj['client_name'] ?? ''))) ?>" data-atrasado="<?= (float)$atrasado ?>" data-pendiente="<?= (float)$pendiente ?>" data-presupuesto="<?= (float)($proj['budget_clp'] ?? 0) ?>" data-nombre="<?= strtolower(htmlspecialchars($proj['name'])) ?>">
   <button class="card-header" style="cursor:pointer;min-height:44px;background:none;border:none;width:100%;text-align:left;padding:0;display:flex;justify-content:space-between;align-items:center" onclick="toggleProyecto('proj-<?= $proj['id'] ?>')" aria-expanded="false" aria-controls="proj-<?= $proj['id'] ?>">
     <div>
       <h2 style="font-size:1.1rem"><?= htmlspecialchars($proj['name']) ?></h2>
@@ -128,6 +155,7 @@ const CLIENTES = <?= json_encode($clientes) ?>;
       <div class="stat-box" style="padding:0.5rem 1rem"><div class="num" style="font-size:1rem;color:#ca8a04">$<?= number_format($pendiente,0,',','.') ?></div><div class="label">Pendiente</div></div>
       <div class="stat-box" style="padding:0.5rem 1rem"><div class="num" style="font-size:1rem;color:#dc2626">$<?= number_format($atrasado,0,',','.') ?></div><div class="label">Atrasado</div></div>
       <div class="stat-box" style="padding:0.5rem 1rem"><div class="num" style="font-size:1rem;color:#2563eb"><?= $docsCount ?> 📄</div><div class="label">Documentos</div></div>
+      <div class="stat-box" style="padding:0.5rem 1rem"><div class="num" style="font-size:.95rem;color:#64748b"><?= implode(' ', array_map(fn($c,$k)=>$c?'<span title="'.htmlspecialchars($k).'">'.$c.'</span>':'', $docsByType, array_keys($docsByType))) ?></div><div class="label">Docs por tipo</div></div>
     </div>
     <?php
       $budget = (float)($proj['budget_clp'] ?? 0);
@@ -167,7 +195,8 @@ const CLIENTES = <?= json_encode($clientes) ?>;
       <?php if ($isStaff): ?>
       <button class="btn btn-primary btn-sm" onclick="editarProyecto(<?= $proj['id'] ?>)">Editar</button>
       <button class="btn btn-outline btn-sm" onclick="cambiarEstadoProyecto(<?= $proj['id'] ?>)">Cambiar estado</button>
-      <button class="btn btn-outline btn-sm" onclick="quickAvance(<?= $proj['id'] ?>, '<?= htmlspecialchars($proj['name'], ENT_QUOTES) ?>')">⚡ Registrar avance rápido</button>
+      <button class="btn btn-outline btn-sm" onclick="quickAvance(<?= $proj['id'] ?>, '<?= htmlspecialchars($proj['name'], ENT_QUOTES) ?>')">⚡ Avance rápido</button>
+      <button class="btn btn-outline btn-sm" onclick="openAvanceTab(<?= $proj['id'] ?>)">📋 Ver avance</button>
       <button class="btn btn-danger btn-sm" onclick="eliminarProyecto(<?= $proj['id'] ?>)">Eliminar</button>
       <?php endif; ?>
     </div>
@@ -197,13 +226,61 @@ function toggleProyecto(id) {
     el.style.display = el.style.display === 'none' ? 'block' : 'none';
   }
 }
-document.getElementById('searchProyectos')?.addEventListener('input', function() {
-  const q = this.value.toLowerCase();
-  document.querySelectorAll('.proyecto-card').forEach(c => { c.style.display = c.dataset.search.includes(q) ? '' : 'none'; });
-});
+document.getElementById('searchProyectos')?.addEventListener('input', filtrarProyectos);
 function filtrarProyectos() {
+  const q = document.getElementById('searchProyectos')?.value.toLowerCase() || '';
   const s = document.getElementById('filterEstado').value;
-  document.querySelectorAll('.proyecto-card').forEach(c => c.style.display = (!s || c.dataset.estado === s) ? '' : 'none');
+  const c = document.getElementById('filterCliente')?.value || '';
+  document.querySelectorAll('.proyecto-card').forEach(card => {
+    const matchQ = !q || card.dataset.search.includes(q);
+    const matchS = !s || card.dataset.estado === s;
+    const matchC = !c || card.dataset.cliente === c;
+    card.style.display = (matchQ && matchS && matchC) ? '' : 'none';
+  });
+}
+function clearProyectoFilters() {
+  const el1 = document.getElementById('searchProyectos');
+  const el2 = document.getElementById('filterEstado');
+  const el3 = document.getElementById('filterCliente');
+  const el4 = document.getElementById('ordenProyectos');
+  if (el1) el1.value = '';
+  if (el2) el2.value = '';
+  if (el3) el3.value = '';
+  if (el4) el4.value = '';
+  document.querySelectorAll('.proyecto-card').forEach(card => card.style.display = '');
+}
+
+function ordenarProyectos() {
+  const container = document.getElementById('proyectosList');
+  const cards = Array.from(container.querySelectorAll('.proyecto-card'));
+  const val = document.getElementById('ordenProyectos').value;
+  if (!val) return;
+  cards.sort((a, b) => {
+    const getNum = (el, attr) => parseFloat(el.getAttribute(attr) || '0');
+    const getStr = (el, attr) => (el.getAttribute(attr) || '').trim().toLowerCase();
+    switch (val) {
+      case 'atraso': return getNum(b, 'data-atrasado') - getNum(a, 'data-atrasado');
+      case 'pendiente': return getNum(b, 'data-pendiente') - getNum(a, 'data-pendiente');
+      case 'presupuesto_desc': return getNum(b, 'data-presupuesto') - getNum(a, 'data-presupuesto');
+      case 'presupuesto_asc': return getNum(a, 'data-presupuesto') - getNum(b, 'data-presupuesto');
+      case 'nombre': return getStr(a, 'data-nombre').localeCompare(getStr(b, 'data-nombre'), 'es');
+      default: return 0;
+    }
+  });
+  container.innerHTML = '';
+  cards.forEach(card => container.appendChild(card));
+}
+
+function openAvanceTab(projectId) {
+  loadTab('avance').then(() => {
+    const sel = document.getElementById('avProyecto') || document.getElementById('progProyecto');
+    if (!sel) return;
+    sel.value = String(projectId);
+    const ev = new Event('change');
+    sel.dispatchEvent(ev);
+    const btn = document.getElementById('btnNuevoAvance');
+    if (btn) btn.style.display = 'inline-block';
+  });
 }
 
 function nuevoProyecto() {
