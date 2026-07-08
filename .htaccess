@@ -1,6 +1,5 @@
 RewriteEngine On
-# Don't rewrite existing files or directories
+# Don't rewrite existing files
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
 # Everything else goes to index.php → public/.htrouter.php
 RewriteRule ^(.*)$ index.php [QSA,L]
