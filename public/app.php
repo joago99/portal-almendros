@@ -325,6 +325,7 @@ function renderAvanceForm(pid, eventId, title, values) {
   // Cargar hitos del proyecto para el selector
   fetch('/api/progress.php?action=list&project_id=' + pid)
     .then(r => r.json()).then(projData => {
+      if (!projData.ok) throw new Error(projData.error || 'Error de autenticación');
       const milestones = projData.milestones || [];
       const overallPct = projData.overall_pct || 0;
       const msLabels = {'cimentacion':'Cimentación','albanileria':'Albañilería / OG','techumbre':'Techumbre','terminaciones':'Terminaciones','recepcion':'Recepción Municipal'};
@@ -375,13 +376,15 @@ function renderAvanceForm(pid, eventId, title, values) {
           <label>Incidencias / Imprevistos</label>
           <textarea name="incidents" rows="2" placeholder="Ej: Lluvia detuvo obra 2h">${values.incidents||''}</textarea>
           <div class="modal-actions">
-            <button type="button" class="btn-outline" onclick="closeModal()">Cancelar</button>
-            <button type="submit" class="btn-primary">${submitLabel}</button>
-          </div>
-        </form>
-        <p style="font-size:.75rem;color:#94a3b8;margin-top:.75rem">Después de guardar podrás subir fotos del avance.</p>`);
-    });
-}
+                  <button type="button" class="btn-outline" onclick="closeModal()">Cancelar</button>
+                  <button type="submit" class="btn-primary">${submitLabel}</button>
+                </div>
+              </form>
+              <p style="font-size:.75rem;color:#94a3b8;margin-top:.75rem">Después de guardar podrás subir fotos del avance.</p>`);
+              }).catch(err => {
+                showToast(err.message || 'Error al cargar formulario', 'error');
+              });
+          }
 
 function saveAvanceForm(f, pid, eventId) {
   const fd = new FormData(f);
