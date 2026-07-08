@@ -30,6 +30,18 @@ $pagosPendientes = $db->query('SELECT COALESCE(SUM(amount_clp),0) as t FROM paym
 $pagosAtrasados = $db->query('SELECT COALESCE(SUM(amount_clp),0) as t FROM payments' . $payWhereBase . 'status = "pendiente" AND due_date < date("now")')->fetch()['t'];
 $totalCobrado = $db->query('SELECT COALESCE(SUM(amount_clp),0) as t FROM payments' . $payWhereBase . 'status = "pagado"')->fetch()['t'];
 
+// Avance KPIs
+$proyFilterSql = $clientFilter ? ' WHERE p.client_id = ' . (int)$clientFilter : '';
+$sinAvance7 = $db->query("SELECT COUNT(*) FROM (SELECT p.id, MAX(e.event_date) as ult FROM projects p LEFT JOIN progress_events e ON e.project_id = p.id $proyFilterSql GROUP BY p.id HAVING ult IS NULL OR ult < date('now','-7 days'))")->fetchColumn();
+$conAvance7 = $db->query("SELECT COUNT(*) FROM (SELECT p.id, MAX(e.event_date) as ult FROM projects p JOIN progress_events e ON e.project_id = p.id $proyFilterSql GROUP BY p.id HAVING ult >= date('now','-7 days'))")->fetchColumn();
+$hitosCumplidos = $db->query("SELECT COUNT(*) FROM project_milestones WHERE completed = 1 AND project_id IN (SELECT id FROM projects" . ($proyFilterSql ?: '') . ")")->fetchColumn();
+$proyConBrecha = 0;
+if (!$clientFilter) {
+    $proyConBrecha = $db->query("SELECT COUNT(*) FROM (SELECT p.id, COALESCE(SUM(m.weight_pct),0) as avance, COALESCE((SELECT SUM(amount_clp) FROM payments WHERE project_id = p.id AND status='pagado'),0) as pagado, p.budget_clp FROM projects p LEFT JOIN project_milestones m ON m.project_id = p.id AND m.completed = 1 GROUP BY p.id HAVING (avance > 0 AND budget_clp > 0 AND ABS(avance - ROUND(pagado/budget_clp*100)) > 10))")->fetchColumn();
+} else {
+    $proyConBrecha = 0; // skip for client view
+}
+
 $proyectosStatuses = ['activo', 'pausado', 'finalizado'];
 $proyectosData = [];
 $statusCounts = [];
@@ -37,7 +49,8 @@ foreach ($proyectosStatuses as $st) {
     $q = 'SELECT p.id, p.name, p.status, c.name as cliente, p.budget_clp,
         COALESCE((SELECT SUM(amount_clp) FROM payments WHERE project_id = p.id AND status = "pagado"),0) as pagado,
         COALESCE((SELECT SUM(amount_clp) FROM payments WHERE project_id = p.id AND status = "pendiente" AND due_date < date("now")),0) as atrasado,
-        COALESCE((SELECT SUM(amount_clp) FROM payments WHERE project_id = p.id AND status = "pendiente" AND due_date >= date("now")),0) as pendiente
+        COALESCE((SELECT SUM(amount_clp) FROM payments WHERE project_id = p.id AND status = "pendiente" AND due_date >= date("now")),0) as pendiente,
+        COALESCE((SELECT SUM(weight_pct) FROM project_milestones WHERE project_id = p.id AND completed = 1),0) as avance_fisico
         FROM projects p JOIN clients c ON c.id = p.client_id WHERE p.status = "' . $st . '"';
     if ($clientFilter) {
         $q .= ' AND p.client_id = ' . (int)$clientFilter;
@@ -83,10 +96,26 @@ function colorStatus($s){
   <div class="stat-box"><div class="num"><?= m($pagosPendientes) ?></div><div class="label">Por cobrar</div></div>
   <div class="stat-box"><div class="num" style="color:#dc2626"><?= m($pagosAtrasados) ?></div><div class="label">Atrasado</div></div>
   <div class="stat-box"><div class="num" style="color:#16a34a"><?= m($totalCobrado) ?></div><div class="label">Cobrado</div></div>
-  <div class="stat-box"><div class="num"><?= (int)$statusCounts['finalizado'] ?></div><div class="label">Terminados</div></div>
-  <div class="stat-box"><div class="num"><?= (int)$statusCounts['activo'] ?></div><div class="label">Activos</div></div>
-  <div class="stat-box"><div class="num"><?= (int)$statusCounts['pausado'] ?></div><div class="label">Pausados</div></div>
+  <div class="stat-box"><div class="num" style="color:#059669"><?= (int)$conAvance7 ?></div><div class="label">Con avance (7d)</div></div>
+  <div class="stat-box"><div class="num" style="color:<?= $sinAvance7 > 0 ? '#dc2626' : '#64748b' ?>"><?= (int)$sinAvance7 ?></div><div class="label">Sin avance (7d)</div></div>
+  <div class="stat-box"><div class="num" style="color:#7c3aed"><?= (int)$hitosCumplidos ?></div><div class="label">Hitos cumplidos</div></div>
+  <div class="stat-box"><div class="num" style="color:<?= $proyConBrecha > 0 ? '#ca8a04' : '#64748b' ?>"><?= (int)$proyConBrecha ?></div><div class="label">Alertas brecha</div></div>
 </div>
+
+<?php if ($sinAvance7 > 0): ?>
+<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:.75rem 1rem;margin-bottom:1rem;display:flex;align-items:center;gap:.75rem">
+  <span style="font-size:1.2rem">⚠️</span>
+  <div><span style="font-weight:600;color:#991b1b"><?= (int)$sinAvance7 ?> obra(s) sin avance en más de 7 días</span>
+  <span style="font-size:.8rem;color:#b91c1c;display:block">Registrar avance pendiente — puede afectar cobranza y visibilidad al cliente.</span></div>
+  <a href="#avance" style="margin-left:auto;background:#dc2626;color:#fff;padding:.4rem .8rem;border-radius:8px;text-decoration:none;font-size:.8rem;font-weight:600;white-space:nowrap">+ Registrar ahora</a>
+</div>
+<?php endif; ?><?php if ($proyConBrecha > 0): ?>
+<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:.75rem 1rem;margin-bottom:1rem;display:flex;align-items:center;gap:.75rem">
+  <span style="font-size:1.2rem">📊</span>
+  <div><span style="font-weight:600;color:#92400e"><?= (int)$proyConBrecha ?> obra(s) con brecha entre avance físico y pagos</span>
+  <span style="font-size:.8rem;color:#a16207;display:block">Revisar en cada obra: avance vs pagos recibidos.</span></div>
+</div>
+<?php endif; ?>
 
 <div class="search-bar">
   <input type="text" id="resumenSearch" placeholder="Buscar proyecto o cliente..." value="<?= htmlspecialchars($searchFilter) ?>">
@@ -110,7 +139,7 @@ function colorStatus($s){
   <?php if ($allCount): ?>
   <div style="overflow-x:auto">
   <table>
-    <tr><th>Proyecto</th><th>Cliente</th><th>Estado</th><th>Presupuesto</th><th>Pagado</th><th>Pendiente</th><th>Atrasado</th><th>Avance</th></tr>
+    <tr><th>Proyecto</th><th>Cliente</th><th>Estado</th><th>Presupuesto</th><th>Pagado</th><th>Pendiente</th><th>Atrasado</th><th>Avance físico</th><th>vs Pagos</th></tr>
     <?php
       foreach ($proyectosStatuses as $st) {
         foreach ($proyectosData[$st] as $p) {
@@ -118,7 +147,9 @@ function colorStatus($s){
           $pendiente = (float)($p['pendiente'] ?? 0);
           $atrasado = (float)($p['atrasado'] ?? 0);
           $budget = (float)($p['budget_clp'] ?? 0);
-          $pct = $budget > 0 ? round(($pagado / $budget) * 100) : 0;
+          $avanceFisico = (int)($p['avance_fisico'] ?? 0);
+          $pagadoPct = $budget > 0 ? round(($pagado / $budget) * 100) : 0;
+          $gap = $avanceFisico - $pagadoPct;
           $statusColor = colorStatus($st);
     ?>
     <tr>
@@ -130,10 +161,21 @@ function colorStatus($s){
       <td style="color:#ca8a04"><?= m($pendiente) ?></td>
       <td style="color:<?= $atrasado > 0 ? '#dc2626' : '#94a3b8' ?>"><?= $atrasado > 0 ? m($atrasado) : '—' ?></td>
       <td>
-        <div style="background:#e2e8f0;border-radius:20px;height:8px;width:96px;overflow:hidden">
-          <div style="background:<?= $pct > 50 ? '#16a34a' : ($pct > 25 ? '#ca8a04' : '#dc2626') ?>;height:8px;width:<?= $pct ?>%;border-radius:20px"></div>
+        <div style="background:#e2e8f0;border-radius:20px;height:8px;width:72px;overflow:hidden;display:inline-block;vertical-align:middle;margin-right:.35rem">
+          <div style="background:<?= $avanceFisico > 50 ? '#059669' : ($avanceFisico > 25 ? '#ca8a04' : '#dc2626') ?>;height:8px;width:<?= $avanceFisico ?>%;border-radius:20px"></div>
         </div>
-        <span style="font-size:0.75rem;color:#64748b"><?= $pct ?>%</span>
+        <span style="font-size:0.75rem;font-weight:700;color:<?= $avanceFisico > 0 ? '#059669' : '#94a3b8' ?>"><?= $avanceFisico ?>%</span>
+      </td>
+      <td style="font-size:0.75rem">
+        <?php if ($avanceFisico > 0 && $budget > 0): ?>
+          <span style="color:<?= abs($gap) <= 10 ? '#059669' : ($gap > 0 ? '#ca8a04' : '#dc2626') ?>">
+            <?= $gap > 0 ? '+' : '' ?><?= $gap ?>%
+          </span>
+          <?php if ($gap > 10): ?><span style="color:#ca8a04;font-weight:600"> ⚠️</span><?php endif; ?>
+          <?php if ($gap < -10): ?><span style="color:#dc2626;font-weight:600"> 🔴</span><?php endif; ?>
+        <?php else: ?>
+          <span style="color:#94a3b8">—</span>
+        <?php endif; ?>
       </td>
     </tr>
     <?php }} ?>
