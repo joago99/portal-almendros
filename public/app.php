@@ -302,7 +302,7 @@ async function eliminarPago(id) {
 
 /* ─── Avance modal unificado (usado desde avance.php y proyectos.php) ─── */
 function openAvanceModal(projectId, eventId) {
-  const pid = eventId ? document.getElementById('avProyecto')?.value : projectId;
+  const pid = eventId ? document.getElementById('avProyecto')?.value : (projectId || document.getElementById('avProyecto')?.value);
   if (!pid) { alert('Selecciona una obra primero'); return; }
   const isEdit = !!eventId;
   const title = isEdit ? 'Editar avance' : 'Registrar avance';
