@@ -124,11 +124,16 @@ function cargarAvance() {
         renderTL(d.data || [], d.milestones || [], d.overall_pct || 0);
         if (typeof updateTitleCount === 'function') updateTitleCount(d.data.length);
       } catch (e) {
-        box.innerHTML = '<div class="empty-state"><p style="color:#b91c1c;font-weight:600">Error en renderTL: ' + (e?.message || e?.toString() || typeof e || 'desconocido') + '</p></div>';
+        box.innerHTML = '<div class="empty-state"><p style="color:#b91c1c;font-weight:600">Error en renderTL: ' + (e?.message || String(e) || 'desconocido') + '</p></div>';
       }
     }).catch((e) => {
       box.innerHTML = '<div class="empty-state"><p style="color:#b91c1c;font-weight:600">Error: ' + (e.message||'desconocido') + '</p></div>';
     });
+}
+
+function esc(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 function renderTL(items, milestones, overallPct) {
