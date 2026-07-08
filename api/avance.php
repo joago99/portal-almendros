@@ -122,8 +122,8 @@ function cargarAvance() {
       window.__finanzas = d.finanzas || null;
       renderTL(d.data || [], d.milestones || [], d.overall_pct || 0);
       if (typeof updateTitleCount === 'function') updateTitleCount(d.data.length);
-    }).catch(() => {
-      box.innerHTML = '<div class="empty-state"><p style="color:#b91c1c;font-weight:600">No se pudo cargar la timeline</p></div>';
+    }).catch((e) => {
+      box.innerHTML = '<div class="empty-state"><p style="color:#b91c1c;font-weight:600">Error: ' + (e.message||'desconocido') + '</p></div>';
     });
 }
 

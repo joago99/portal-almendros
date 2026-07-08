@@ -211,14 +211,23 @@ function filtrarResumen(){
   const q = document.getElementById('resumenSearch')?.value.trim() || '';
   const estado = document.getElementById('resumenEstado')?.value || '';
   const cliente = document.getElementById('resumenCliente')?.value || '';
-  const base = '<?= htmlspecialchars($_SERVER['SCRIPT_NAME'], ENT_QUOTES) ?>';
   const params = new URLSearchParams();
   if (q) params.set('q', q);
   if (estado) params.set('estado', estado);
   if (cliente) params.set('client_id', cliente);
-  window.location.search = params.toString();
+  const box = document.getElementById('mainContent');
+  if (box) { box.innerHTML = '<div style="text-align:center;padding:2rem;color:#94a3b8">Cargando...</div>'; }
+  fetch('/api/resumen.php?' + params.toString())
+    .then(r => r.text())
+    .then(html => { if (box) box.innerHTML = html; })
+    .catch(() => { if (box) box.innerHTML = '<div style="text-align:center;padding:2rem;color:#dc2626">Error al cargar</div>'; });
 }
 function clearResumenFilters(){
-  window.location.search = '';
+  const box = document.getElementById('mainContent');
+  if (box) { box.innerHTML = '<div style="text-align:center;padding:2rem;color:#94a3b8">Cargando...</div>'; }
+  fetch('/api/resumen.php')
+    .then(r => r.text())
+    .then(html => { if (box) box.innerHTML = html; })
+    .catch(() => { if (box) box.innerHTML = '<div style="text-align:center;padding:2rem;color:#dc2626">Error al cargar</div>'; });
 }
 </script>
