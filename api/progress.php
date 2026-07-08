@@ -159,18 +159,41 @@ if ($action) {
             if (is_string($v)) $v = preg_replace('//u', '', $v);
         });
 
-        // Milestone summary + overall percentage
+        // Milestone summary + overall percentage + financial metrics
         $msLabels = ['cimentacion'=>'Cimentación','albanileria'=>'Albañilería / OG','techumbre'=>'Techumbre','terminaciones'=>'Terminaciones','recepcion'=>'Recepción Municipal'];
         $milestones = $db->prepare("SELECT milestone_type, label, seq, weight_pct, completed, completed_at FROM project_milestones WHERE project_id = ? ORDER BY seq");
         $milestones->execute([$projId]);
         $msData = $milestones->fetchAll();
         $overallPct = $db->query("SELECT COALESCE(SUM(weight_pct),0) FROM project_milestones WHERE project_id = $projId AND completed = 1")->fetchColumn();
 
+        // Financial metrics
+        $budget = $db->query("SELECT budget_clp FROM projects WHERE id = $projId")->fetchColumn();
+        $totalPaid = $db->query("SELECT COALESCE(SUM(amount_clp),0) FROM payments WHERE project_id = $projId AND status = 'pagado'")->fetchColumn();
+        $totalPending = $db->query("SELECT COALESCE(SUM(amount_clp),0) FROM payments WHERE project_id = $projId AND status IN ('pendiente','atrasado')")->fetchColumn();
+        $paidPct = $budget > 0 ? round(($totalPaid / $budget) * 100) : 0;
+        $gapPct = (int)$overallPct - (int)$paidPct;
+
+        $alerts = [];
+        if ($gapPct > 10) {
+            $alerts[] = ['type'=>'cliente_debe_pagar', 'severity'=>'warning', 'message'=>"Avance supera pagos en $gapPct% — cliente debe pagar", 'gap'=>$gapPct];
+        }
+        if ($gapPct < -10) {
+            $alerts[] = ['type'=>'sobrefacturacion', 'severity'=>'danger', 'message'=>"Pagos superan avance físico: " . abs($gapPct) . "% — revisar facturación", 'gap'=>$gapPct];
+        }
+
         echo json_encode([
             'ok' => true,
             'data' => $events,
             'milestones' => $msData,
             'overall_pct' => (int)$overallPct,
+            'finanzas' => [
+                'budget_clp' => (int)$budget,
+                'total_pagado' => (int)$totalPaid,
+                'total_pendiente' => (int)$totalPending,
+                'pagado_pct' => (int)$paidPct,
+                'gap_pct' => (int)$gapPct,
+                'alerts' => $alerts,
+            ],
         ]);
         exit;
     }

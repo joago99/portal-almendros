@@ -119,6 +119,7 @@ function cargarAvance() {
     .then(r => r.json()).then(d => {
       if (!d.ok) throw new Error(d.error || 'Error');
       window.__msData = d.milestones || [];
+      window.__finanzas = d.finanzas || null;
       renderTL(d.data || [], d.milestones || [], d.overall_pct || 0);
       if (typeof updateTitleCount === 'function') updateTitleCount(d.data.length);
     }).catch(() => {
@@ -155,10 +156,9 @@ function renderTL(items, milestones, overallPct) {
   h += '<div style="height:100%;width:' + overallPct + '%;background:linear-gradient(90deg,#0d9488,#059669);border-radius:4px;transition:width .4s"></div>';
   h += '</div>';
   // Tabla de hitos por etapa
-  h += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:.4rem">';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:.4rem;margin-bottom:.75rem">';
   for (const m of msMilestones) {
     const done = m.completed ? 1 : 0;
-    const color = MS_COLORS[m.milestone_type] || '#94a3b8';
     const icon = MS_ICONS[m.milestone_type] || '';
     h += '<div style="text-align:center;padding:.5rem .2rem;border-radius:8px;background:' + (done ? '#f0fdf4' : '#f8fafc') + ';border:1px solid ' + (done ? '#bbf7d0' : '#e2e8f0') + '">';
     h += '<div style="font-size:1.3rem;margin-bottom:.2rem">' + icon + '</div>';
@@ -167,7 +167,25 @@ function renderTL(items, milestones, overallPct) {
     else h += '<div style="font-size:.6rem;color:#94a3b8;margin-top:.1rem">' + m.weight_pct + '%</div>';
     h += '</div>';
   }
-  h += '</div></div>';
+  h += '</div>';
+  // ─── Financial metrics ───
+  if (window.__finanzas) {
+    const f = window.__finanzas;
+    const fmt = (n) => '$' + Number(n).toLocaleString('es-CL').replace(/,/g,'.');
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;margin-bottom:.5rem">';
+    h += '<div style="background:#f8fafc;border-radius:8px;padding:.5rem;text-align:center"><div style="font-size:.65rem;text-transform:uppercase;color:#64748b;font-weight:600">Presupuesto</div><div style="font-weight:700;color:#0f172a;font-size:.9rem">' + (f.budget_clp ? fmt(f.budget_clp) : '—') + '</div></div>';
+    h += '<div style="background:#f0fdf4;border-radius:8px;padding:.5rem;text-align:center"><div style="font-size:.65rem;text-transform:uppercase;color:#059669;font-weight:600">Pagado</div><div style="font-weight:700;color:#059669;font-size:.9rem">' + fmt(f.total_pagado) + '</div><div style="font-size:.7rem;color:#059669">' + f.pagado_pct + '%</div></div>';
+    h += '<div style="background:#fef9c3;border-radius:8px;padding:.5rem;text-align:center"><div style="font-size:.65rem;text-transform:uppercase;color:#a16207;font-weight:600">Pendiente</div><div style="font-weight:700;color:#a16207;font-size:.9rem">' + fmt(f.total_pendiente) + '</div></div>';
+    h += '</div>';
+    // Alertas de brecha
+    for (const a of f.alerts) {
+      const bg = a.severity === 'danger' ? '#fef2f2' : '#fffbeb';
+      const cl = a.severity === 'danger' ? '#b91c1c' : '#92400e';
+      const icon = a.severity === 'danger' ? '🔴' : '⚠️';
+      h += '<div style="background:' + bg + ';border:1px solid ' + (a.severity === 'danger' ? '#fecaca' : '#fde68a') + ';border-radius:8px;padding:.5rem .7rem;font-size:.8rem;color:' + cl + ';margin-bottom:.5rem">' + icon + ' ' + a.message + '</div>';
+    }
+  }
+  h += '</div>';
 
   // ─── Timeline ───
   if (!items.length) {
