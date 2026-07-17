@@ -21,7 +21,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user_id'] = (int)$row['id'];
         $_SESSION['user_role'] = $row['role'];
         $_SESSION['user_name'] = $row['name'];
-        // Get client_id for client users
         if ($row['role'] === 'client') {
             $st = $db->prepare('SELECT client_id FROM app_users WHERE id = ?');
             $st->execute([$row['id']]);
@@ -40,24 +39,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="UTF-8">
   <title>Portal - Construcciones Los Almendros</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-  <div class="container">
-    <h1>Portal Los Almendros</h1>
-    <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1); if ($message): ?>
-      <div class="error"><?= htmlspecialchars($message) ?></div>
-    <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1); endif; ?>
-    <form method="POST" action="/login.php">
-      <input name="email" type="email" placeholder="Email" required>
-      <input name="password" type="password" placeholder="Contraseña" required>
-      <button type="submit">Ingresar</button>
-    </form>
-    <p><a href="#" onclick="alert('Solicita restablecimiento de contraseña al administrador.')">Olvidé mi contraseña</a></p>
+  <div class="headerbar"></div>
+  <div class="section">
+    <div class="content-wrap">
+      <div class="container">
+        <span class="section-label">Acceso</span>
+        <h1 class="section-title">Construcciones Los Almendros</h1>
+        <p class="section-description">Ingresá al portal para ver el estado de tu obra.</p>
+
+        <?php if ($message): ?>
+          <div class="empty-state" style="color:#111111"><p><?= htmlspecialchars($message) ?></p></div>
+        <?php endif; ?>
+
+        <form method="POST" action="/login.php" style="margin-top:1.25rem;text-align:left">
+          <label>Email</label>
+          <input name="email" type="email" placeholder="tu@email.cl" required autocomplete="email">
+          <label>Contraseña</label>
+          <input name="password" type="password" placeholder="••••••••" required autocomplete="current-password">
+          <button type="submit" class="btn btn-primary" style="width:100%;margin-top:0.75rem">Ingresar</button>
+        </form>
+
+        <p style="margin-top:1rem;font-size:0.85rem;color:#57534e">
+          <a href="#" onclick="alert('Solicita restablecimiento de contraseña al administrador.')">Olvidé mi contraseña</a>
+        </p>
+      </div>
+    </div>
   </div>
 </body>
 </html>
