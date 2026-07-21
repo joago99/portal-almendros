@@ -114,6 +114,9 @@ $is_client = $user_role === 'client';
         <?php if ($atrasados > 0): ?><span class="badge"><?= $atrasados ?></span><?php endif; ?>
       </a>
       <a class="nav-item" data-tab="documentos" href="#documentos"><span class="icon" style="width:8px;height:8px;border-radius:2px;background:#111111;display:inline-block;flex-shrink:0"></span><span>Documentos</span></a>
+      <?php if (!$is_client): ?>
+        <a class="nav-item" data-tab="cotizaciones" href="#cotizaciones"><span class="icon" style="width:8px;height:8px;border-radius:2px;background:#b45309;display:inline-block;flex-shrink:0"></span><span>Cotizaciones</span></a>
+      <?php endif; ?>
       <?php if ($is_admin): ?>
         <a class="nav-item" data-tab="admin" href="#admin" style="margin-top:0.5rem;border-top:1px solid rgba(17,17,17,0.08);padding-top:0.75rem"><span class="icon" style="width:8px;height:8px;border-radius:2px;background:#111111;display:inline-block;flex-shrink:0"></span><span>Admin</span></a>
       <?php endif; ?>
@@ -192,6 +195,7 @@ $is_client = $user_role === 'client';
         clientes: 'Clientes',
         pagos: 'Pagos',
         documentos: 'Documentos',
+        cotizaciones: 'Cotizaciones',
         password: 'Cambiar contraseña',
         admin: 'Admin'
       };
